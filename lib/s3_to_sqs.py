@@ -2,10 +2,10 @@ import json
 import re
 
 import boto3
+import schema
 from absl import app
 from absl import flags
 from absl import logging
-from lib import schema
 
 # Define args
 FLAGS = flags.FLAGS
@@ -42,6 +42,8 @@ def process_batch(input_batch: list):
         edsm_object = schema.system()
 
       raw_data = re.search('(\{.*\})', line)
+      print(raw_data)
+      print()
       edsm_object.from_json(raw_data.group(1))
       system_data = edsm_object.to_json()
       output_batch.append(system_data)
