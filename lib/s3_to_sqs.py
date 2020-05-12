@@ -1,5 +1,6 @@
 import json
 import re
+import pprint
 
 import boto3
 import schema
@@ -40,14 +41,13 @@ def process_batch(input_batch: list):
       elif FLAGS.input_type == 'bodies':
         edsm_object = schema.system()
       elif FLAGS.input_type == 'powerplay':
-        edsm_object = schema.system()
+        edsm_object = schema.powerplay()
       elif FLAGS.input_type == 'stations':
-        edsm_object = schema.system()
+        edsm_object = schema.station()
 
       raw_data = re.search('(\{.*\})', line)
-      print(raw_data)
-      print()
       edsm_object.from_json(raw_data.group(1))
+      print(edsm_object.__dict__)
       system_data = edsm_object.to_json()
       output_batch.append(system_data)
     except AttributeError as e:
