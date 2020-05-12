@@ -15,7 +15,10 @@ flags.DEFINE_integer('batch_size',
                      lower_bound=0)
 flags.DEFINE_string('queue_name', None, 'Message queue to send output.')
 flags.DEFINE_string('input_json', None, 'Path to JSON input file.')
-flags.DEFINE_enum('input_type', None, ['systems', 'population', 'bodies', 'powerplay', 'stations'], 'Input file type.')
+flags.DEFINE_enum('input_type',
+                  None,
+                  ['systems', 'population', 'bodies', 'powerplay', 'stations'],
+                  'Input file type.')
 flags.mark_flag_as_required('queue_name')
 flags.mark_flag_as_required('input_json')
 flags.mark_flag_as_required('input_type')
