@@ -2,10 +2,10 @@ import json
 import multiprocessing
 
 import boto3
+import schema
 from absl import app
 from absl import flags
 from absl import logging
-from lib import schema
 
 # Define args
 FLAGS = flags.FLAGS
