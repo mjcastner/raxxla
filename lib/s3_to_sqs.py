@@ -2,17 +2,17 @@ import json
 import re
 import pprint
 
-import boto3
-import schema
 from absl import app
 from absl import flags
 from absl import logging
+import boto3
+import schema
 
 # Define args
 FLAGS = flags.FLAGS
-flags.DEFINE_integer('batch_size', 
-                     500, 
-                     'Default job batch size for processing and loading', 
+flags.DEFINE_integer('batch_size',
+                     500,
+                     'Default job batch size for processing and loading',
                      lower_bound=1)
 flags.DEFINE_string('queue_name', None, 'Message queue to send output.')
 flags.DEFINE_string('input_json', None, 'Path to JSON input file.')
@@ -31,7 +31,7 @@ sqs = boto3.resource('sqs')
 def process_batch(input_batch: list):
   # Assemble output from valid JSON lines in input
   output_batch = []
-  
+
   for line in input_batch:
     try:
       if FLAGS.input_type == 'systems':
@@ -45,7 +45,7 @@ def process_batch(input_batch: list):
       elif FLAGS.input_type == 'stations':
         edsm_object = schema.station()
 
-      raw_data = re.search('(\{.*\})', line)
+      raw_data = re.search(r'(\{.*\})', line)
       edsm_object.from_json(raw_data.group(1))
       system_data = edsm_object.to_json()
       output_batch.append(system_data)
@@ -71,23 +71,25 @@ def process_batch(input_batch: list):
 
 
 def main(argv):
-    # Instantiate SQS queue
-    global sqs_queue
-    sqs_queue = sqs.get_queue_by_name(QueueName=FLAGS.queue_name)
+  del argv
 
-    with open(FLAGS.input_json, 'r') as systems_file:
-      # Process lines in multithreaded batches
-      json_batch = []
-      for line in systems_file:
-        if len(json_batch) < FLAGS.batch_size:
-          json_batch.append(line)
-        else:
-          process_batch(json_batch)
-          json_batch.clear()
-      
-      # Catch any leftover items in final batch
-      process_batch(json_batch)
+  # Instantiate SQS queue
+  global sqs_queue
+  sqs_queue = sqs.get_queue_by_name(QueueName=FLAGS.queue_name)
+
+  with open(FLAGS.input_json, 'r') as systems_file:
+    # Process lines in multithreaded batches
+    json_batch = []
+    for line in systems_file:
+      if len(json_batch) < FLAGS.batch_size:
+        json_batch.append(line)
+      else:
+        process_batch(json_batch)
+        json_batch.clear()
+
+    # Catch any leftover items in final batch
+    process_batch(json_batch)
 
 
 if __name__ == '__main__':
-    app.run(main)
+  app.run(main)
