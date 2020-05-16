@@ -11,9 +11,9 @@ from absl import logging
 # Define args
 FLAGS = flags.FLAGS
 flags.DEFINE_integer('batch_size', 
-                     250, 
+                     500, 
                      'Default job batch size for processing and loading', 
-                     lower_bound=0)
+                     lower_bound=1)
 flags.DEFINE_string('queue_name', None, 'Message queue to send output.')
 flags.DEFINE_string('input_json', None, 'Path to JSON input file.')
 flags.DEFINE_enum('input_type',
@@ -47,7 +47,6 @@ def process_batch(input_batch: list):
 
       raw_data = re.search('(\{.*\})', line)
       edsm_object.from_json(raw_data.group(1))
-      print(edsm_object.__dict__)
       system_data = edsm_object.to_json()
       output_batch.append(system_data)
     except AttributeError as e:
@@ -57,6 +56,12 @@ def process_batch(input_batch: list):
       logging.error('Uncaught exception: ', e)
 
   json_data = json.dumps(output_batch)
+
+  print(edsm_object.__dict__)
+  print(FLAGS.input_type)
+  print(type(json_data))
+  print(len(json_data))
+  print('\n\n')
 
   # Send batch to SQS queue
   # response = sqs_queue.send_message(MessageBody=json_data,

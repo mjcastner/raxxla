@@ -3,6 +3,70 @@ import json
 from absl import logging
 
 
+class body:
+  def __init__(self):
+    self.id = None
+    self.system_id = None
+    self.relative_id = None
+    self.name = None
+    self.details = None
+    self.atmosphere = None
+    self.composition = None
+    self.parents = None
+    self.orbit = {
+      'period': None,
+      'rotational_period': None,
+      'tidally_locked': None,
+      'periapsis': None,
+      'eccentricity': None,
+      'inclination': None,
+      'semimajor_axis': None,
+      'axial_tilt': None,
+    }
+    self.updated = None
+
+
+
+
+  def from_json(self, input_json):
+    try:
+      input_dict = json.loads(input_json)
+      
+      self.id = input_dict['id64']
+      self.system_id = input_dict['systemId64']
+      self.relative_id = input_dict['bodyId']
+      self.name = input_dict['name']
+      self.details = {
+        'type': input_dict['type'],
+        'subtype': input_dict['subType'],
+        'distance': input_dict['distanceToArrival'],
+        'mass': input_dict['earthMasses'],
+        'gravity': input_dict['gravity'],
+        'landable': input_dict['isLandable'],
+        'radius': input_dict['radius'],
+        'temperature': input_dict['surfaceTemperature'],
+        'pressure': input_dict['surfacePressure'],
+        'volcanism': input_dict['volcanismType'],
+        'terraforming': input_dict['terraformingState'],
+      }
+      self.atmosphere = 'atmosphere': {
+        'type': None,
+        'composition': None,
+      }
+
+      
+
+      self.coordinates['x'] = input_dict['coords']['x']
+    except KeyError as e:
+      logging.warning('Unable to map field %s, double check --input_type flag.',
+                      e)
+
+  def to_json(self):
+    return json.dumps(self, 
+                      default=lambda 
+                      o: o.__dict__)
+
+
 class powerplay:
   def __init__(self):
     self.system_id = None
@@ -41,16 +105,7 @@ class station:
     self.name = None
     self.type = None
     self.distance = None
-    self.services = {
-      'market': None,
-      'shipyard': None,
-      'outfitting': None,
-      'other': [],
-      'market_metadata': {
-        'id': None,
-        'economy': None,
-      }
-    }
+    self.services = None
     self.allegiance = None
     self.government = None
     self.updated = None
@@ -91,13 +146,8 @@ class system:
   def __init__(self):
     self.id = None
     self.name = None
-    self.date = None
-    self.coordinates = {
-      'x': None,
-      'y': None,
-      'z': None,
-      'coordinates': None
-    }
+    self.coordinates = None
+    self.updated = None
 
   def from_json(self, input_json):
     try:
@@ -105,13 +155,15 @@ class system:
       
       self.id = input_dict['id64']
       self.name = input_dict['name']
-      self.date = input_dict['date']
-      self.coordinates['x'] = input_dict['coords']['x']
-      self.coordinates['y'] = input_dict['coords']['y']
-      self.coordinates['z'] = input_dict['coords']['z']
-      self.coordinates['coordinates'] = '%s, %s, %s' % (self.coordinates['x'],
-                                                        self.coordinates['y'],
-                                                        self.coordinates['z'])
+      self.coordinates = {
+        'x': input_dict['coords']['x'],
+        'y': input_dict['coords']['y'],
+        'z': input_dict['coords']['z'],
+        'coordinates': '%s, %s, %s' % (self.coordinates['x'],
+                                       self.coordinates['y'],
+                                       self.coordinates['z'])
+      }
+      self.updated = input_dict['date']
     except KeyError as e:
       logging.warning('Unable to map field %s, double check --input_type flag.',
                       e)

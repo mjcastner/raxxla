@@ -1,0 +1,35 @@
+{
+  "id64":324262018720932961,
+  "systemId64":2845550257249,
+  "bodyId":9,
+  "name":"Plaa Eurk EM-F b11-1 6",
+    
+    "type":"Planet",
+    "subType":"Icy body",
+    "distanceToArrival":2324,
+    "earthMasses":0.911524,
+    "gravity":0.648257684472153,
+    "isLandable":false,
+    "radius":7563.011,
+    "surfaceTemperature":33,
+    "surfacePressure":0.19829360581297806,
+    "volcanismType":"Water Geysers",
+    "terraformingState":"Not terraformable",
+
+    "atmosphereType":"Neon-rich",
+    "atmosphereComposition":{"Helium":97.56,"Neon":2.44},
+  
+  "solidComposition":{"Ice":68.32,"Rock":21.17,"Metal":10.51},
+  "parents":[{"Null":8},{"Star":0}],
+  
+    "orbitalPeriod":394.8308333333333,
+    "rotationalPeriod":0.5782972999884259,
+    "rotationalPeriodTidallyLocked":false,
+    "argOfPeriapsis":111.174278,
+    "orbitalEccentricity":0.036764,
+    "orbitalInclination":1.834529,
+    "semiMajorAxis":0.008717487073163268,
+    "axialTilt":0.217764,
+  
+  "updateTime":"2020-05-01 07:36:17",
+},
