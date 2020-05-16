@@ -39,7 +39,7 @@ def process_batch(input_batch: list):
       elif FLAGS.input_type == 'population':
         edsm_object = schema.system()
       elif FLAGS.input_type == 'bodies':
-        edsm_object = schema.system()
+        edsm_object = schema.body()
       elif FLAGS.input_type == 'powerplay':
         edsm_object = schema.powerplay()
       elif FLAGS.input_type == 'stations':
@@ -49,6 +49,11 @@ def process_batch(input_batch: list):
       edsm_object.from_json(raw_data.group(1))
       system_data = edsm_object.to_json()
       output_batch.append(system_data)
+
+      pprint.pprint(raw_data.group(1))
+      pprint.pprint(edsm_object.__dict__)
+      print(FLAGS.input_type)
+      print()
     except AttributeError as e:
       logging.warning(e)
       logging.warning('Malformed JSON string: %s', line)
@@ -56,12 +61,6 @@ def process_batch(input_batch: list):
       logging.error('Uncaught exception: ', e)
 
   json_data = json.dumps(output_batch)
-
-  print(edsm_object.__dict__)
-  print(FLAGS.input_type)
-  print(type(json_data))
-  print(len(json_data))
-  print('\n\n')
 
   # Send batch to SQS queue
   # response = sqs_queue.send_message(MessageBody=json_data,
