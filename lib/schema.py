@@ -43,7 +43,6 @@ class body:
     self.rings = []
     self.updated = None
 
-
   @staticmethod
   def __format_ringlike(input_list):
     output_list = []
@@ -61,7 +60,6 @@ class body:
 
     return output_list
 
-
   @staticmethod
   def __format_parents(input_list):
     output_list = []
@@ -78,7 +76,6 @@ class body:
 
     return output_list
 
-
   @staticmethod
   def __format_percentage(input_dict):
     output_list = []
@@ -92,7 +89,6 @@ class body:
         output_list.append(output_dict)
 
     return output_list
-
 
   def from_json(self, input_json):
     try:
@@ -146,7 +142,6 @@ class body:
       logging.warning('Unable to map field %s, double check --input_type flag.',
                       e)
 
-
   def to_json(self):
     return json.dumps(self,
                       default=lambda o: o.__dict__)
@@ -159,7 +154,6 @@ class population:
     self.society = None
     self.factions = []
     self.updated = None
-
 
   @staticmethod
   def __format_faction_states(input_dict):
@@ -193,7 +187,6 @@ class population:
 
     return output_list
 
-
   def __format_factions(self, input_dict):
     output_list = []
     factions = input_dict.get('factions')
@@ -213,7 +206,6 @@ class population:
       output_list.append(output_dict)
 
     return output_list
-
 
   def from_json(self, input_json):
     try:
@@ -249,7 +241,6 @@ class powerplay:
     self.allegiance = None
     self.government = None
     self.updated = None
-
 
   def from_json(self, input_json):
     try:
