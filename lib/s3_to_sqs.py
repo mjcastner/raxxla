@@ -37,7 +37,7 @@ def process_batch(input_batch: list):
       if FLAGS.input_type == 'systems':
         edsm_object = schema.system()
       elif FLAGS.input_type == 'population':
-        edsm_object = schema.system()
+        edsm_object = schema.population()
       elif FLAGS.input_type == 'bodies':
         edsm_object = schema.body()
       elif FLAGS.input_type == 'powerplay':
@@ -50,8 +50,11 @@ def process_batch(input_batch: list):
       system_data = edsm_object.to_json()
       output_batch.append(system_data)
 
+      # Debug printing
       print('--------------------------INPUT')
-      pprint.pprint(json.loads(raw_data.group(1)))
+      raw_dict = json.loads(raw_data.group(1))
+      for k, v in raw_dict.items():
+        print(k)
       print()
       print('--------------------------OUTPUT')
       pprint.pprint(edsm_object.__dict__)
