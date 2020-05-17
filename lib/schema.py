@@ -9,7 +9,7 @@ class body:
     self.system_id = None
     self.relative_id = None
     self.name = None
-    self.details = {
+    self.properties = {
       'type': None,
       'subtype': None,
       'distance': None,
@@ -26,8 +26,8 @@ class body:
       'type': None,
       'composition': [],
     }
+    self.belts = []
     self.composition = []
-    self.parents = []
     self.orbit = {
       'period': None,
       'rotational_period': None,
@@ -38,7 +38,25 @@ class body:
       'semimajor_axis': None,
       'axial_tilt': None,
     }
+    self.parents = []
     self.updated = None
+
+
+  def _format_belts(self, input_list):
+    output_list = []
+
+    if input_list:
+      for belt in input_list:
+        output_dict = {
+          'name': belt.get('name'),
+          'type': belt.get('type'),
+          'mass': belt.get('mass'),
+          'inner_radius': belt.get('innerRadius'),
+          'outer_radius': belt.get('outerRadius'),
+        }
+        output_list.append(output_dict)
+
+    return output_list
 
 
   def _format_parents(self, input_list):
@@ -79,7 +97,7 @@ class body:
       self.system_id = input_dict.get('systemId64')
       self.relative_id = input_dict.get('bodyId')
       self.name = input_dict.get('name')
-      self.details = {
+      self.properties = {
         'type': input_dict.get('type'),
         'subtype': input_dict.get('subType'),
         'distance': input_dict.get('distanceToArrival'),
@@ -96,8 +114,8 @@ class body:
         'type': input_dict.get('atmosphereType'),
         'composition': self._format_percentage(input_dict.get('atmosphereComposition')),
       }
+      self.belts = self._format_belts(input_dict.get('belts'))
       self.composition = self._format_percentage(input_dict.get('solidComposition'))
-      self.parents = self._format_parents(input_dict.get('parents'))
       self.orbit = {
         'period': input_dict.get('orbitalPeriod'),
         'rotational_period': input_dict.get('rotationalPeriod'),
@@ -108,6 +126,7 @@ class body:
         'semimajor_axis': input_dict.get('semiMajorAxis'),
         'axial_tilt': input_dict.get('axialTilt'),
       }
+      self.parents = self._format_parents(input_dict.get('parents'))
       self.updated = input_dict.get('updateTime')
     except KeyError as e:
       logging.warning('Unable to map field %s, double check --input_type flag.',

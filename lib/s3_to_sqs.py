@@ -50,9 +50,15 @@ def process_batch(input_batch: list):
       system_data = edsm_object.to_json()
       output_batch.append(system_data)
 
-      pprint.pprint(raw_data.group(1))
+      print('--------------------------INPUT')
+      pprint.pprint(json.loads(raw_data.group(1)))
+      print()
+      print('--------------------------OUTPUT')
       pprint.pprint(edsm_object.__dict__)
+      print()
+      print('--------------------------TYPE')
       print(FLAGS.input_type)
+      print()
       print()
     except AttributeError as e:
       logging.warning(e)
