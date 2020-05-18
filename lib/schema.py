@@ -190,20 +190,29 @@ class population:
   def __format_factions(self, input_dict):
     output_list = []
     factions = input_dict.get('factions')
-    controlling_faction = input_dict.get('controllingFaction')
 
-    for faction in factions:
-      output_dict = {
-          'id': faction.get('id'),
-          'name': faction.get('name'),
-          'allegiance': faction.get('allegiance'),
-          'government': faction.get('government'),
-          'influence': faction.get('influence'),
-          'happiness': faction.get('happiness'),
-          'player_faction': faction.get('isPlayer'),
-          'states': self.__format_faction_states(faction),
-      }
-      output_list.append(output_dict)
+    if factions:
+      for faction in factions:
+        output_dict = {
+            'id': faction.get('id'),
+            'name': faction.get('name'),
+            'allegiance': faction.get('allegiance'),
+            'controlling': False,
+            'government': faction.get('government'),
+            'influence': faction.get('influence'),
+            'happiness': faction.get('happiness'),
+            'player_faction': faction.get('isPlayer'),
+            'states': self.__format_faction_states(faction),
+        }
+
+        # Toggle controlling faction bool
+        controlling_faction_id = input_dict.get(
+            'controllingFaction', {}).get('id')
+
+        if faction.get('id') == controlling_faction_id:
+          output_dict['controlling'] = True
+
+        output_list.append(output_dict)
 
     return output_list
 

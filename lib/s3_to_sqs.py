@@ -1,6 +1,5 @@
 import json
 import re
-import pprint
 
 from absl import app
 from absl import flags
@@ -28,7 +27,7 @@ flags.mark_flag_as_required('input_type')
 sqs = boto3.resource('sqs')
 
 
-def process_batch(input_batch: list):
+def process_batch(input_batch: list, sqs_queue: sqs.Queue):
   # Assemble output from valid JSON lines in input
   output_batch = []
 
@@ -49,41 +48,32 @@ def process_batch(input_batch: list):
       edsm_object.from_json(raw_data.group(1))
       system_data = edsm_object.to_json()
       output_batch.append(system_data)
-
-      # Debug printing
-      print('--------------------------INPUT')
-      raw_dict = json.loads(raw_data.group(1))
-      for k, v in raw_dict.items():
-        print(k)
-      print()
-      print('--------------------------OUTPUT')
-      pprint.pprint(edsm_object.__dict__)
-      print()
-      print('--------------------------TYPE')
-      print(FLAGS.input_type)
-      print()
-      print()
     except AttributeError as e:
       logging.warning(e)
       logging.warning('Malformed JSON string: %s', line)
-    except Exception as e:
-      logging.error('Uncaught exception: ', e)
 
   json_data = json.dumps(output_batch)
 
   # Send batch to SQS queue
-  # response = sqs_queue.send_message(MessageBody=json_data,
-  #                                   MessageAttributes={
-  #                                     'type': FLAGS.input_type})
-  # sqs_id = response.get('MessageId')
-  # logging.info('SQS MessageId: %s', sqs_id)
+  response = sqs_queue.send_message(MessageBody=json_data,
+                                    MessageAttributes={
+                                        'dataset': {
+                                            'StringValue': 'edsm',
+                                            'DataType': 'String'
+                                        },
+                                        'table': {
+                                            'StringValue': FLAGS.input_type,
+                                            'DataType': 'String'
+                                        },
+                                    })
+  sqs_id = response.get('MessageId')
+  logging.info('SQS MessageId: %s', sqs_id)
 
 
 def main(argv):
   del argv
 
   # Instantiate SQS queue
-  global sqs_queue
   sqs_queue = sqs.get_queue_by_name(QueueName=FLAGS.queue_name)
 
   with open(FLAGS.input_json, 'r') as systems_file:
@@ -93,11 +83,11 @@ def main(argv):
       if len(json_batch) < FLAGS.batch_size:
         json_batch.append(line)
       else:
-        process_batch(json_batch)
+        process_batch(json_batch, sqs_queue)
         json_batch.clear()
 
     # Catch any leftover items in final batch
-    process_batch(json_batch)
+    process_batch(json_batch, sqs_queue)
 
 
 if __name__ == '__main__':
