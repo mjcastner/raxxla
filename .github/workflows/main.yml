@@ -19,3 +19,5 @@ jobs:
           aws-region: us-west-2
       - name: Build application image
         run: docker build -t raxxla:latest .
+      - name: Push image to ECR
+        run: docker tag raxxla:latest 209604952396.dkr.ecr.us-west-2.amazonaws.com/raxxla:latest
