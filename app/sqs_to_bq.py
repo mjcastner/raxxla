@@ -2,8 +2,8 @@ import json
 import multiprocessing
 import pprint
 
+from lib import schema
 import boto3
-import schema
 from absl import app
 from absl import flags
 from absl import logging

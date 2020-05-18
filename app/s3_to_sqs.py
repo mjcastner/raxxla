@@ -1,11 +1,11 @@
 import json
 import re
 
+from lib import schema
 from absl import app
 from absl import flags
 from absl import logging
 import boto3
-import schema
 
 # Define args
 FLAGS = flags.FLAGS
