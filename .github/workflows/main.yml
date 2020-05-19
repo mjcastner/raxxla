@@ -19,6 +19,8 @@ jobs:
           aws-region: us-west-2
       - name: Build application image
         run: docker build -t raxxla:latest .
+      - name: Run application image
+        run: docker run raxxla:latest s3_to_sqs.py --help
       - name: Push image to ECR
         run: |
           aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin 209604952396.dkr.ecr.us-west-2.amazonaws.com
