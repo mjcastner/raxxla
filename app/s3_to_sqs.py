@@ -1,3 +1,5 @@
+import codecs
+import io
 import json
 import re
 
@@ -13,18 +15,21 @@ flags.DEFINE_integer('batch_size',
                      500,
                      'Default job batch size for processing and loading',
                      lower_bound=1)
-flags.DEFINE_string('queue_name', None, 'Message queue to send output.')
-flags.DEFINE_string('input_json', None, 'Path to JSON input file.')
-flags.DEFINE_enum('input_type',
+flags.DEFINE_string('bucket', None, 'AWS S3 Bucket for raw file storage.')
+flags.DEFINE_string('filepath', None, 'Path to JSON input file.')
+flags.DEFINE_string('queue', None, 'SQS queue to send messages.')
+flags.DEFINE_enum('type',
                   None,
                   ['systems', 'population', 'bodies', 'powerplay', 'stations'],
                   'Input file type.')
-flags.mark_flag_as_required('queue_name')
-flags.mark_flag_as_required('input_json')
-flags.mark_flag_as_required('input_type')
+flags.mark_flag_as_required('bucket')
+flags.mark_flag_as_required('filepath')
+flags.mark_flag_as_required('queue')
+flags.mark_flag_as_required('type')
 
 # Global vars
 sqs = boto3.resource('sqs')
+s3 = boto3.resource('s3')
 
 
 def process_batch(input_batch: list, sqs_queue: sqs.Queue):
@@ -33,15 +38,15 @@ def process_batch(input_batch: list, sqs_queue: sqs.Queue):
 
   for line in input_batch:
     try:
-      if FLAGS.input_type == 'systems':
+      if FLAGS.type == 'systems':
         edsm_object = schema.system()
-      elif FLAGS.input_type == 'population':
+      elif FLAGS.type == 'population':
         edsm_object = schema.population()
-      elif FLAGS.input_type == 'bodies':
+      elif FLAGS.type == 'bodies':
         edsm_object = schema.body()
-      elif FLAGS.input_type == 'powerplay':
+      elif FLAGS.type == 'powerplay':
         edsm_object = schema.powerplay()
-      elif FLAGS.input_type == 'stations':
+      elif FLAGS.type == 'stations':
         edsm_object = schema.station()
 
       raw_data = re.search(r'(\{.*\})', line)
@@ -62,7 +67,7 @@ def process_batch(input_batch: list, sqs_queue: sqs.Queue):
                                             'DataType': 'String'
                                         },
                                         'table': {
-                                            'StringValue': FLAGS.input_type,
+                                            'StringValue': FLAGS.type,
                                             'DataType': 'String'
                                         },
                                     })
@@ -74,20 +79,24 @@ def main(argv):
   del argv
 
   # Instantiate SQS queue
-  sqs_queue = sqs.get_queue_by_name(QueueName=FLAGS.queue_name)
+  sqs_queue = sqs.get_queue_by_name(QueueName=FLAGS.queue)
+  
+  # Process S3 input file
+  logging.info('Processing s3://%s/%s...', FLAGS.bucket, FLAGS.filepath)
+  file_object = s3.Object(FLAGS.bucket, FLAGS.filepath)
+  file_body = file_object.get()['Body']
 
-  with open(FLAGS.input_json, 'r') as systems_file:
-    # Process lines in multithreaded batches
-    json_batch = []
-    for line in systems_file:
-      if len(json_batch) < FLAGS.batch_size:
-        json_batch.append(line)
-      else:
-        process_batch(json_batch, sqs_queue)
-        json_batch.clear()
+  json_batch = []
+  for line in codecs.getreader('utf-8')(file_body):
+    print(line)
+    print()
+  #   if len(json_batch) < FLAGS.batch_size:
+  #     json_batch.append(line)
+  #   else:
+  #     process_batch(json_batch, sqs_queue)
+  #     json_batch.clear()
 
-    # Catch any leftover items in final batch
-    process_batch(json_batch, sqs_queue)
+  # process_batch(json_batch, sqs_queue)
 
 
 if __name__ == '__main__':

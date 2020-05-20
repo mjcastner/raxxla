@@ -38,16 +38,11 @@ def fetch_edsm_file(filetype: str):
     logging.info('Processing gzipped file...')
     gz_data = response.read()
     file_content = gzip.decompress(gz_data)
-    
-    file_object = file_content.decode()
-    print(dir(file_object))
-
+    file_object = io.BytesIO(file_content)
     s3_path = '%s/%s.json' % (FLAGS.prefix, filetype)
 
-    # logging.info('Uploading file to s3:/%s/%s...', FLAGS.bucket, s3_path)
-    # s3_response = s3.upload_fileobj(file_object, FLAGS.bucket, s3_path)
-    # print(response)
-    # print(dir(response))
+    logging.info('Uploading file to s3:/%s/%s...', FLAGS.bucket, s3_path)
+    s3_response = s3.upload_fileobj(file_object, FLAGS.bucket, s3_path)
 
 
 def main(argv):
