@@ -1,4 +1,3 @@
-import codecs
 import io
 import json
 import re
@@ -84,19 +83,18 @@ def main(argv):
   # Process S3 input file
   logging.info('Processing s3://%s/%s...', FLAGS.bucket, FLAGS.filepath)
   file_object = s3.Object(FLAGS.bucket, FLAGS.filepath)
-  file_body = file_object.get()['Body']
+  file_body = file_object.get()['Body'].iter_lines()
 
   json_batch = []
-  for line in codecs.getreader('utf-8')(file_body):
-    print(line)
-    print()
-  #   if len(json_batch) < FLAGS.batch_size:
-  #     json_batch.append(line)
-  #   else:
-  #     process_batch(json_batch, sqs_queue)
-  #     json_batch.clear()
+  for line in file_body:
+    if len(json_batch) < FLAGS.batch_size:
+      json_batch.append(line.decode())
+    else:
+      print(json_batch)
+      process_batch(json_batch, sqs_queue)
+      json_batch.clear()
 
-  # process_batch(json_batch, sqs_queue)
+  process_batch(json_batch, sqs_queue)
 
 
 if __name__ == '__main__':
