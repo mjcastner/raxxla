@@ -1,5 +1,6 @@
-import io
 import gzip
+import io
+import os
 from urllib import request
 
 from absl import app
@@ -34,15 +35,33 @@ def fetch_edsm_file(filetype: str):
   edsm_file_url = edsm_files.get(filetype)
   logging.info('Fetching %s...', edsm_file_url)
 
+  # Fetch GZ from EDSM
   with request.urlopen(edsm_file_url) as response:
     logging.info('Processing gzipped file...')
+    gz_filepath = '/tmp/%s.gz' % (filetype)
     gz_data = response.read()
-    file_content = gzip.decompress(gz_data)
-    file_object = io.BytesIO(file_content)
-    s3_path = '%s/%s.json' % (FLAGS.prefix, filetype)
 
-    logging.info('Uploading file to s3:/%s/%s...', FLAGS.bucket, s3_path)
-    s3_response = s3.upload_fileobj(file_object, FLAGS.bucket, s3_path)
+    with open(gz_filepath, 'wb') as gz_file:
+      gz_file.write(gz_data)
+
+  # Decompress JSON
+  with gzip.open(gz_filepath, 'rb') as f_in:
+    json_filepath = '/tmp/%s.json' % (filetype)
+    json_data = f_in.read()
+
+    with open(json_filepath, 'wb') as f_out:
+        f_out.write(json_data)
+
+  # Upload to S3
+  s3_path = '%s/%s.json' % (FLAGS.prefix, filetype)
+  logging.info('Uploading file to s3:/%s/%s...', FLAGS.bucket, s3_path)
+  s3.upload_file(json_filepath, FLAGS.bucket, s3_path)
+
+  # Clean up tmp files
+  logging.info('Cleaning temp files...')
+  tmp_files = [gz_filepath, json_filepath]
+  for file in tmp_files:
+    os.remove(file)
 
 
 def main(argv):
