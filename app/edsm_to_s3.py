@@ -1,6 +1,7 @@
 import gzip
 import io
 import os
+from multiprocessing import Pool
 from urllib import request
 
 from absl import app
@@ -23,58 +24,57 @@ flags.mark_flag_as_required('type')
 # Global vars
 s3 = boto3.client('s3')
 edsm_files = {
-  'bodies': 'https://www.edsm.net/dump/bodies7days.json.gz',
-  'population': 'https://www.edsm.net/dump/systemsPopulated.json.gz',
-  'powerplay': 'https://www.edsm.net/dump/powerPlay.json.gz',
-  'stations': 'https://www.edsm.net/dump/stations.json.gz',
-  'systems': 'https://www.edsm.net/dump/systemsWithCoordinates.json.gz',
+    'bodies': 'https://www.edsm.net/dump/bodies7days.json.gz',
+    'population': 'https://www.edsm.net/dump/systemsPopulated.json.gz',
+    'powerplay': 'https://www.edsm.net/dump/powerPlay.json.gz',
+    'stations': 'https://www.edsm.net/dump/stations.json.gz',
+    'systems': 'https://www.edsm.net/dump/systemsWithCoordinates.json.gz',
 }
 
 
-def fetch_edsm_file(filetype: str):
+def fetch_edsm_file(filetype: str) -> tuple:
   edsm_file_url = edsm_files.get(filetype)
 
   # Fetch GZ from EDSM
   logging.info('Fetching %s...', edsm_file_url)
   with request.urlopen(edsm_file_url) as response:
     gz_filepath = '/tmp/%s.gz' % (filetype)
-    json_filepath = '/tmp/%s.json' % (filetype)
     gz_data = response.read()
 
     with open(gz_filepath, 'wb') as gz_file:
       gz_file.write(gz_data)
       logging.info('Saved to %s...', gz_filepath)
 
-  with open(gz_filepath, 'rb') as gz_file:
-    logging.info('Decompressing %s...', gz_filepath)
-    gz_content = gz_file.read()
-    stream_str = io.BytesIO(gz_content)
+  return (filetype, gz_filepath)
 
-    with open(json_filepath, 'wb') as json_file:
-      logging.info('Writing output to %s...', json_filepath)
-      raw_content = gzip.decompress(stream_str.read())
-      json_file.write(raw_content)
 
-  # Upload to S3
+def upload_to_s3(type_path: tuple) -> bool:
+  filetype = type_path[0]
+  filepath = type_path[1]
   s3_path = '%s/%s.json' % (FLAGS.prefix, filetype)
-  logging.info('Uploading file to s3:/%s/%s...', FLAGS.bucket, s3_path)
-  s3.upload_file(json_filepath, FLAGS.bucket, s3_path)
-
-  # Clean up tmp files
-  logging.info('Cleaning temp files...')
-  tmp_files = [gz_filepath, json_filepath]
-  for file in tmp_files:
-    os.remove(file)
+  
+  try:
+    logging.info('Uploading file to s3:/%s/%s...', FLAGS.bucket, s3_path)
+    s3.upload_file(filepath, FLAGS.bucket, s3_path)
+    os.remove(filepath)
+    return True
+  except Exception as e:
+    logging.error(e)
+    return False
 
 
 def main(argv):
   del argv
 
   if FLAGS.type == 'all':
-    for k, v in edsm_files.items():
-      fetch_edsm_file(k)
+    with Pool(5) as fetch_pool:
+      download_list = list(edsm_files.keys())
+      type_paths = fetch_pool.map(fetch_edsm_file, download_list)
+      if all(type_paths) == True:
+        fetch_pool.map(upload_to_s3, type_paths)
   else:
-    fetch_edsm_file(FLAGS.type)
+    type_path = fetch_edsm_file(FLAGS.type)
+    upload_status = upload_to_s3(type_path)
 
 
 if __name__ == '__main__':
