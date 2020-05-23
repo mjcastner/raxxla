@@ -52,10 +52,10 @@ def fetch_edsm_file(filetype: str):
 
     with open(json_filepath, 'wb') as json_file:
       logging.info('Writing output to %s...', json_filepath)
-      raw_content = gzip.decompress(stream_str.getvalue())
+      raw_content = gzip.decompress(stream_str.read())
       json_file.write(raw_content)
 
-  # # Upload to S3
+  # Upload to S3
   s3_path = '%s/%s.json' % (FLAGS.prefix, filetype)
   logging.info('Uploading file to s3:/%s/%s...', FLAGS.bucket, s3_path)
   s3.upload_file(json_filepath, FLAGS.bucket, s3_path)
