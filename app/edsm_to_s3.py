@@ -33,26 +33,27 @@ edsm_files = {
 
 def fetch_edsm_file(filetype: str):
   edsm_file_url = edsm_files.get(filetype)
-  logging.info('Fetching %s...', edsm_file_url)
 
   # Fetch GZ from EDSM
+  logging.info('Fetching %s...', edsm_file_url)
   with request.urlopen(edsm_file_url) as response:
-    logging.info('Processing gzipped file...')
     gz_filepath = '/tmp/%s.gz' % (filetype)
+    json_filepath = '/tmp/%s.json' % (filetype)
     gz_data = response.read()
 
     with open(gz_filepath, 'wb') as gz_file:
+      logging.info('Processing gzipped file...')
       gz_file.write(gz_data)
 
-  # Decompress JSON
-  with gzip.open(gz_filepath, 'rb') as f_in:
-    json_filepath = '/tmp/%s.json' % (filetype)
-    json_data = f_in.read()
+  with open(gz_filepath, 'rb') as gz_file:
+    gz_content = gz_file.read()
+    stream_str = io.BytesIO(gz_content)
 
-    with open(json_filepath, 'wb') as f_out:
-        f_out.write(json_data)
+    with open(json_filepath, 'wb') as json_file:
+      raw_content = gzip.decompress(stream_str.getvalue())
+      json_file.write(raw_content)
 
-  # Upload to S3
+  # # Upload to S3
   s3_path = '%s/%s.json' % (FLAGS.prefix, filetype)
   logging.info('Uploading file to s3:/%s/%s...', FLAGS.bucket, s3_path)
   s3.upload_file(json_filepath, FLAGS.bucket, s3_path)
