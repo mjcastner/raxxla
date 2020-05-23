@@ -42,14 +42,16 @@ def fetch_edsm_file(filetype: str):
     gz_data = response.read()
 
     with open(gz_filepath, 'wb') as gz_file:
-      logging.info('Processing gzipped file...')
       gz_file.write(gz_data)
+      logging.info('Saved to %s...', gz_filepath)
 
   with open(gz_filepath, 'rb') as gz_file:
+    logging.info('Decompressing %s...', gz_filepath)
     gz_content = gz_file.read()
     stream_str = io.BytesIO(gz_content)
 
     with open(json_filepath, 'wb') as json_file:
+      logging.info('Writing output to %s...', json_filepath)
       raw_content = gzip.decompress(stream_str.getvalue())
       json_file.write(raw_content)
 
