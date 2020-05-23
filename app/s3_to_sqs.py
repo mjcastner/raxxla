@@ -1,6 +1,8 @@
+import gzip
 import io
 import json
 import re
+from multiprocessing import Pool
 
 from lib import schema
 from absl import app
@@ -76,49 +78,77 @@ def process_batch(input_batch: list, sqs_queue: sqs.Queue):
   logging.info('SQS MessageId: %s', sqs_id)
 
 
-def file_parser(filetype: str) -> list:
+def file_parser(filetype: str) -> bool:
   output_batch = []
-
   file_path = '%s/%s.gz' % (FLAGS.prefix, filetype)
-  print(file_path)
-  logging.info('Parsing s3://%s/%s', FLAGS.bucket, file_path)
   file_object = s3.Object(FLAGS.bucket, file_path)
   file_body = file_object.get()['Body'].read()
-  
-  gzipfile = BytesIO(file_body)
-  gzipfile = gzip.GzipFile(fileobj=gzipfile)
-  content = gzipfile.read()
-  print(content)
-  return output_batch
+  file_stream = io.BytesIO(file_body)
+
+  logging.info('Parsing s3://%s/%s', FLAGS.bucket, file_path)
+  with gzip.GzipFile(fileobj=file_stream, mode='rb') as file:
+    for line in file:
+      if len(output_batch) < FLAGS.batch_size:
+        try:
+          if filetype == 'systems':
+            edsm_object = schema.system()
+          elif filetype == 'population':
+            edsm_object = schema.population()
+          elif filetype == 'bodies':
+            edsm_object = schema.body()
+          elif filetype == 'powerplay':
+            edsm_object = schema.powerplay()
+          elif filetype == 'stations':
+            edsm_object = schema.station()
+
+          raw_data = re.search(r'(\{.*\})', line.decode())
+          edsm_object.from_json(raw_data.group(1))
+          system_data = edsm_object.to_json()
+          output_batch.append(system_data)
+        except AttributeError as e:
+          logging.warning(e)
+          logging.warning('Malformed JSON string: %s', line)
+      else:
+        queue_status = sqs_batch_send(filetype, output_batch)
+        if queue_status:
+          output_batch.clear()
+
+    queue_status = sqs_batch_send(filetype, output_batch)
+
+  return True
 
 
-def sqs_batch_send(input_list: list) -> bool:
-  print(input_list)
+def sqs_batch_send(filetype: str, input_batch: list) -> bool:
+  # Send batch to SQS queue
+  sqs_queue = sqs.get_queue_by_name(QueueName=FLAGS.queue)
+  json_data = json.dumps(input_batch)
+  response = sqs_queue.send_message(MessageBody=json_data,
+                                    MessageAttributes={
+                                        'dataset': {
+                                            'StringValue': 'edsm',
+                                            'DataType': 'String'
+                                        },
+                                        'table': {
+                                            'StringValue': filetype,
+                                            'DataType': 'String'
+                                        },
+                                    })
+  sqs_id = response.get('MessageId')
+  logging.info('SQS MessageId: %s', sqs_id)
+
   return True
 
 
 def main(argv):
   del argv
-  sqs_queue = sqs.get_queue_by_name(QueueName=FLAGS.queue)
 
-  test = file_parser(FLAGS.type)
-  print(test)
-
-  # Process S3 input file
-  # logging.info('Processing s3://%s/%s...', FLAGS.bucket, FLAGS.filepath)
-  # file_object = s3.Object(FLAGS.bucket, FLAGS.filepath)
-  # file_body = file_object.get()['Body'].iter_lines()
-
-  # json_batch = []
-  # for line in file_body:
-  #   if len(json_batch) < FLAGS.batch_size:
-  #     json_batch.append(line.decode())
-  #   else:
-  #     print(json_batch)
-  #     process_batch(json_batch, sqs_queue)
-  #     json_batch.clear()
-
-  # process_batch(json_batch, sqs_queue)
+  if FLAGS.type == 'all':
+    filetype_list = ['systems', 'population', 'bodies',
+                     'powerplay', 'stations']
+    for filetype in filetype_list:
+      sqs_results = file_parser(filetype)
+  else:
+    sqs_results = file_parser(FLAGS.type)
 
 
 if __name__ == '__main__':
