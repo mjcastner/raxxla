@@ -1,6 +1,7 @@
 import gzip
 import io
 import os
+import sys
 from multiprocessing import Pool
 from urllib import request
 
@@ -51,7 +52,7 @@ def fetch_edsm_file(filetype: str) -> tuple:
 def upload_to_s3(type_path: tuple) -> bool:
   filetype = type_path[0]
   filepath = type_path[1]
-  s3_path = '%s/%s.json' % (FLAGS.prefix, filetype)
+  s3_path = '%s/%s.gz' % (FLAGS.prefix, filetype)
   
   try:
     logging.info('Uploading file to s3:/%s/%s...', FLAGS.bucket, s3_path)
@@ -72,6 +73,9 @@ def main(argv):
       type_paths = fetch_pool.map(fetch_edsm_file, download_list)
       if all(type_paths) == True:
         fetch_pool.map(upload_to_s3, type_paths)
+      else:
+        logging.error('1 or more files failed to download, exiting...')
+        sys.exit()
   else:
     type_path = fetch_edsm_file(FLAGS.type)
     upload_status = upload_to_s3(type_path)
