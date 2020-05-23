@@ -139,7 +139,7 @@ class body:
       self.rings = self.__format_ringlike(input_dict.get('rings'))
       self.updated = input_dict.get('updateTime')
     except KeyError as e:
-      logging.warning('Unable to map field %s, double check --input_type flag.',
+      logging.warning('Unable to map field %s, double check --type flag.',
                       e)
 
   def to_json(self):
@@ -233,7 +233,7 @@ class population:
       self.factions = self.__format_factions(input_dict)
       self.updated = input_dict.get('date')
     except KeyError as e:
-      logging.warning('Unable to map field %s, double check --input_type flag.',
+      logging.warning('Unable to map field %s, double check --type flag.',
                       e)
 
   def to_json(self):
@@ -263,7 +263,7 @@ class powerplay:
       self.government = input_dict.get('government')
       self.updated = input_dict.get('date')
     except KeyError as e:
-      logging.warning('Unable to map field %s, double check --input_type flag.',
+      logging.warning('Unable to map field %s, double check --type flag.',
                       e)
 
   def to_json(self):
@@ -310,7 +310,7 @@ class station:
       self.faction = input_dict.get('controllingFaction')
       self.updated = input_dict.get('updateTime', {}).get('information')
     except KeyError as e:
-      logging.warning('Unable to map field %s, double check --input_type flag.',
+      logging.warning('Unable to map field %s, double check --type flag.',
                       e)
 
   def to_json(self):
@@ -341,7 +341,7 @@ class system:
       }
       self.updated = input_dict.get('date')
     except KeyError as e:
-      logging.warning('Unable to map field %s, double check --input_type flag.',
+      logging.warning('Unable to map field %s, double check --type flag.',
                       e)
 
   def to_json(self):

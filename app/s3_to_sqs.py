@@ -4,11 +4,11 @@ import json
 import re
 from multiprocessing import Pool
 
-from lib import schema
 from absl import app
 from absl import flags
 from absl import logging
 import boto3
+from lib import schema
 
 # Define args
 FLAGS = flags.FLAGS
@@ -22,8 +22,8 @@ flags.DEFINE_string('queue', None, 'SQS queue to send messages.')
 flags.DEFINE_enum('type',
                   None,
                   [
-                    'systems', 'population', 'bodies',
-                    'powerplay', 'stations', 'all'
+                      'systems', 'population', 'bodies',
+                      'powerplay', 'stations', 'all'
                   ],
                   'Input file type.')
 flags.mark_flag_as_required('bucket')
