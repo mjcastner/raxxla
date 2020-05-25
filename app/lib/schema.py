@@ -1,6 +1,7 @@
 import json
 
 from absl import logging
+from google.cloud import bigquery
 
 
 class body:
@@ -114,6 +115,7 @@ class body:
           'solar_masses': input_dict.get('solarMasses'),
           'solar_radius': input_dict.get('solarRadius'),
           'spectral_class': input_dict.get('spectralClass'),
+          # TODO (mjcastner): Move reserve_level to belts
           'reserve_level': input_dict.get('reserveLevel'),
       }
       self.atmosphere = {
@@ -139,12 +141,84 @@ class body:
       self.rings = self.__format_ringlike(input_dict.get('rings'))
       self.updated = input_dict.get('updateTime')
     except KeyError as e:
-      logging.warning('Unable to map field %s, double check --type flag.',
-                      e)
+      logging.warning('Unable to map field %s, double check --type flag.', e)
 
   def to_json(self):
     return json.dumps(self,
                       default=lambda o: o.__dict__)
+
+  def table_schema(self):
+    bigquery_schema = [
+      bigquery.SchemaField("id", "INTEGER", mode="REQUIRED"),
+      bigquery.SchemaField("system_id", "INTEGER", mode="REQUIRED"),
+      bigquery.SchemaField("relative_id", "INTEGER", mode="NULLABLE"),
+      bigquery.SchemaField("name", "STRING", mode="NULLABLE"),
+      bigquery.SchemaField("properties", "RECORD", mode="NULLABLE", fields=[
+        bigquery.SchemaField("type", "STRING", mode="NULLABLE"),
+        bigquery.SchemaField("subtype", "STRING", mode="NULLABLE"),
+        bigquery.SchemaField("mass", "FLOAT", mode="NULLABLE"),
+        bigquery.SchemaField("gravity", "FLOAT", mode="NULLABLE"),
+        bigquery.SchemaField("landable", "BOOLEAN", mode="NULLABLE"),
+        bigquery.SchemaField("radius", "FLOAT", mode="NULLABLE"),
+        bigquery.SchemaField("temperature", "INTEGER", mode="NULLABLE"),
+        bigquery.SchemaField("pressure", "FLOAT", mode="NULLABLE"),
+        bigquery.SchemaField("volcanism", "STRING", mode="NULLABLE"),
+        bigquery.SchemaField("terraforming", "STRING", mode="NULLABLE"),
+        bigquery.SchemaField("luminosity", "STRING", mode="NULLABLE"),
+        bigquery.SchemaField("solar_masses", "FLOAT", mode="NULLABLE"),
+        bigquery.SchemaField("solar_radius", "FLOAT", mode="NULLABLE"),
+        bigquery.SchemaField("spectral_class", "STRING", mode="NULLABLE"),
+        # TODO (mjcastner): Move reserve_level to belts
+        bigquery.SchemaField("reserve_level", "STRING", mode="NULLABLE"),
+      ]),
+      bigquery.SchemaField("atmosphere", "RECORD", mode="NULLABLE", fields=[
+        bigquery.SchemaField("type", "STRING", mode="NULLABLE"),
+        bigquery.SchemaField("composition", "RECORD", mode="REPEATED", fields=[
+            bigquery.SchemaField("type", "STRING", mode="NULLABLE"),
+            bigquery.SchemaField("percentage", "FLOAT", mode="NULLABLE"),
+        ]),
+      ]),
+      bigquery.SchemaField("belts", "RECORD", mode="REPEATED", fields=[
+        bigquery.SchemaField("name", "STRING", mode="NULLABLE"),
+        bigquery.SchemaField("type", "STRING", mode="NULLABLE"),
+        bigquery.SchemaField("mass", "INTEGER", mode="NULLABLE"),
+        bigquery.SchemaField("inner_radius", "INTEGER", mode="NULLABLE"),
+        bigquery.SchemaField("outer_radius", "INTEGER", mode="NULLABLE"),
+      ]),
+      bigquery.SchemaField("composition", "RECORD", mode="REPEATED", fields=[
+        bigquery.SchemaField("type", "STRING", mode="NULLABLE"),
+        bigquery.SchemaField("percentage", "FLOAT", mode="NULLABLE"),
+      ]),
+      # TODO(mjcastner): Refactor all the percentage / ringlink fields to pull from a common variable
+      bigquery.SchemaField("materials", "RECORD", mode="REPEATED", fields=[
+        bigquery.SchemaField("type", "STRING", mode="NULLABLE"),
+        bigquery.SchemaField("percentage", "FLOAT", mode="NULLABLE"),
+      ]),
+      bigquery.SchemaField("orbit", "RECORD", mode="NULLABLE", fields=[
+        bigquery.SchemaField("period", "FLOAT", mode="NULLABLE"),
+        bigquery.SchemaField("rotational_period", "FLOAT", mode="NULLABLE"),
+        bigquery.SchemaField("tidally_locked", "BOOLEAN", mode="NULLABLE"),
+        bigquery.SchemaField("periapsis", "FLOAT", mode="NULLABLE"),
+        bigquery.SchemaField("eccentricity", "FLOAT", mode="NULLABLE"),
+        bigquery.SchemaField("inclination", "FLOAT", mode="NULLABLE"),
+        bigquery.SchemaField("semimajor_axis", "FLOAT", mode="NULLABLE"),
+        bigquery.SchemaField("axial_tilt", "FLOAT", mode="NULLABLE"),
+      ]),
+      bigquery.SchemaField("parents", "RECORD", mode="REPEATED", fields=[
+        bigquery.SchemaField("type", "STRING", mode="NULLABLE"),
+        bigquery.SchemaField("relative_id", "INTEGER", mode="NULLABLE"),
+      ]),
+      bigquery.SchemaField("rings", "RECORD", mode="REPEATED", fields=[
+        bigquery.SchemaField("name", "STRING", mode="NULLABLE"),
+        bigquery.SchemaField("type", "STRING", mode="NULLABLE"),
+        bigquery.SchemaField("mass", "INTEGER", mode="NULLABLE"),
+        bigquery.SchemaField("inner_radius", "INTEGER", mode="NULLABLE"),
+        bigquery.SchemaField("outer_radius", "INTEGER", mode="NULLABLE"),
+      ]),
+      bigquery.SchemaField("updated", "TIMESTAMP", mode="REQUIRED"),
+    ]
+
+    return bigquery_schema
 
 
 class population:

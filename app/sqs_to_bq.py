@@ -36,7 +36,17 @@ def main(argv):
   # Instantiate BQ
   bq_client = bq_utils.aws_bq_client(FLAGS.service_account_secret)
   dataset = bq_client.dataset('raxxla.edsm')
-  table = bq_client.table('raxxla.edsm.powerplay')
+  
+  edsm_object = schema.body()
+  table_schema = edsm_object.table_schema()
+  table = bigquery.Table('raxxla.edsm.bodies', schema=table_schema)
+  table = bq_client.create_table(table)
+
+  # table = bq_client.table('raxxla.edsm.bodies', table_schema)
+  pprint.pprint(table.schema)
+  print(type(table))
+  print(dir(table))
+  #bq_client.delete_table(table)
 
   # # # Instantiate SQS
   # sqs_queue = sqs.get_queue_by_name(QueueName=FLAGS.queue_name)

@@ -32,11 +32,13 @@ class aws_bq_client(bigquery.client.Client):
     return output_dataset
 
 
-  def table(self, table_name: str):
+  def table(self, table_name: str, table_schema=list):
     try:
       output_table = self.get_table(table_name)
     except google.api_core.exceptions.NotFound as e:
       logging.error('Table \'%s\' not found, creating...', table_name)
+
+      bq_table = bigquery.Table(table_name, schema=table_schema)
       self.create_table(table_name)
       output_table = self.get_table(table_name)
 
