@@ -11,14 +11,15 @@ from lib import schema
 
 # Global vars
 file_types = list(schema.edsm_files.keys())
-file_types.append('all')
+file_types_meta = file_types.copy()
+file_types_meta.append('all')
 s3 = boto3.client('s3')
 
 # Define flags
 FLAGS = flags.FLAGS
 flags.DEFINE_string('bucket', None, 'AWS S3 Bucket for raw file storage.')
 flags.DEFINE_string('prefix', 'edsm', 'AWS S3 path prefix.')
-flags.DEFINE_enum('type', None, file_types, 'Input file type.')
+flags.DEFINE_enum('type', None, file_types_meta, 'Input file type.')
 flags.mark_flag_as_required('bucket')
 flags.mark_flag_as_required('type')
 
