@@ -3,6 +3,13 @@ import json
 from absl import logging
 from google.cloud import bigquery
 
+edsm_files = {
+    'bodies': 'https://www.edsm.net/dump/bodies7days.json.gz',
+    'population': 'https://www.edsm.net/dump/systemsPopulated.json.gz',
+    'powerplay': 'https://www.edsm.net/dump/powerPlay.json.gz',
+    'stations': 'https://www.edsm.net/dump/stations.json.gz',
+    'systems': 'https://www.edsm.net/dump/systemsWithCoordinates.json.gz',
+}
 
 class body:
   def __init__(self):
