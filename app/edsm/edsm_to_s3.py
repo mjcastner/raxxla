@@ -7,10 +7,10 @@ from urllib import request
 import boto3
 from absl import app, flags, logging
 
-from lib import schema
+from edsm import schema
 
 # Global vars
-file_types = list(schema.edsm_files.keys())
+file_types = list(schema.filetypes.keys())
 file_types_meta = file_types.copy()
 file_types_meta.append('all')
 s3 = boto3.client('s3')
@@ -24,9 +24,10 @@ flags.mark_flag_as_required('bucket')
 flags.mark_flag_as_required('type')
 
 
+# TODO(mjcastner): Consider moving S3 functions to lib and generalizing
 def fetch_edsm_file(filetype: str) -> tuple:
   fetch_complete = False
-  edsm_file_url = schema.edsm_files.get(filetype)
+  edsm_file_url = schema.filetypes.get(filetype)
   gz_filepath = '/tmp/%s.gz' % (filetype)
 
   # Fetch GZ from EDSM
@@ -64,8 +65,6 @@ def upload_to_s3(filetype_obj: tuple) -> bool:
 
 
 def main(argv):
-  del argv
-
   if FLAGS.type == 'all':
     with Pool(5) as fetch_pool:
       filetype_obj = fetch_pool.map(fetch_edsm_file, file_types)

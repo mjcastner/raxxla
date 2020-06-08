@@ -4,10 +4,9 @@ import json
 import re
 from multiprocessing import Pool
 
-from absl import app
-from absl import flags
-from absl import logging
 import boto3
+from absl import app, flags, logging
+from google.cloud import bigquery
 from lib import schema
 
 # Define args
@@ -140,15 +139,18 @@ def sqs_batch_send(filetype: str, input_batch: list) -> bool:
 
 
 def main(argv):
-  del argv
+  client = bigquery.Client()
+  job_config = bigquery.LoadJobConfig()
+  
+  # del argv
 
-  if FLAGS.type == 'all':
-    filetype_list = ['systems', 'population', 'bodies',
-                     'powerplay', 'stations']
-    for filetype in filetype_list:
-      sqs_results = file_parser(filetype)
-  else:
-    sqs_results = file_parser(FLAGS.type)
+  # if FLAGS.type == 'all':
+  #   filetype_list = ['systems', 'population', 'bodies',
+  #                    'powerplay', 'stations']
+  #   for filetype in filetype_list:
+  #     sqs_results = file_parser(filetype)
+  # else:
+  #   sqs_results = file_parser(FLAGS.type)
 
 
 if __name__ == '__main__':
