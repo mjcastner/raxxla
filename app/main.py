@@ -1,8 +1,7 @@
+import boto3
 from lib import sqs
 
-client = sqs.sqs_client(
-    queue_name='raxxla',
-    queue_url='https://sqs.us-west-2.amazonaws.com/209604952396/raxxla')
-
-print(dir(client))
-print(client.available_messages)
+test = sqs.send_message('raxxla', 'test')
+test2 = sqs.receive_message('raxxla')
+print(test2)
+print(type(test2))
