@@ -7,7 +7,7 @@ from google.cloud import bigquery
 from google.oauth2 import service_account
 
 
-class aws_bq_client(bigquery.client.Client):
+class bigquery_client(bigquery.client.Client):
   def __init__(self, aws_secret_key: str):
     # Initialize BQ client from AWS Secrets Manager
     secrets_manager = boto3.client('secretsmanager')

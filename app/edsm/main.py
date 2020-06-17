@@ -4,7 +4,7 @@ import pprint
 import boto3
 
 from edsm import schema
-from lib import bq_utils
+from lib import bigquery
 
 # Global vars
 secrets_manager = boto3.client('secretsmanager')
