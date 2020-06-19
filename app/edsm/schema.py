@@ -4,10 +4,198 @@ from absl import logging
 from google.cloud import bigquery
 
 
+# File metadata / schema
+urls = {
+    'bodies': 'https://www.edsm.net/dump/bodies7days.json.gz',
+    'population': 'https://www.edsm.net/dump/systemsPopulated.json.gz',
+    'powerplay': 'https://www.edsm.net/dump/powerPlay.json.gz',
+    'stations': 'https://www.edsm.net/dump/stations.json.gz',
+    'systems': 'https://www.edsm.net/dump/systemsWithCoordinates.json.gz',
+}
+file_types = list(urls.keys())
+
+bodies = [
+    bigquery.SchemaField("id", "INTEGER", mode="REQUIRED"),
+    bigquery.SchemaField("system_id", "INTEGER", mode="REQUIRED"),
+    bigquery.SchemaField("relative_id", "INTEGER", mode="NULLABLE"),
+    bigquery.SchemaField("name", "STRING", mode="NULLABLE"),
+    bigquery.SchemaField("properties", "RECORD", mode="NULLABLE", fields=[
+        bigquery.SchemaField("type", "STRING", mode="NULLABLE"),
+        bigquery.SchemaField("subtype", "STRING", mode="NULLABLE"),
+        bigquery.SchemaField("distance", "INTEGER", mode="NULLABLE"),
+        bigquery.SchemaField("mass", "FLOAT", mode="NULLABLE"),
+        bigquery.SchemaField("gravity", "FLOAT", mode="NULLABLE"),
+        bigquery.SchemaField("landable", "BOOLEAN", mode="NULLABLE"),
+        bigquery.SchemaField("radius", "FLOAT", mode="NULLABLE"),
+        bigquery.SchemaField("temperature", "INTEGER", mode="NULLABLE"),
+        bigquery.SchemaField("pressure", "FLOAT", mode="NULLABLE"),
+        bigquery.SchemaField("volcanism", "STRING", mode="NULLABLE"),
+        bigquery.SchemaField("terraforming", "STRING", mode="NULLABLE"),
+        bigquery.SchemaField("luminosity", "STRING", mode="NULLABLE"),
+        bigquery.SchemaField("solar_masses", "FLOAT", mode="NULLABLE"),
+        bigquery.SchemaField("solar_radius", "FLOAT", mode="NULLABLE"),
+        bigquery.SchemaField("spectral_class", "STRING", mode="NULLABLE"),
+        bigquery.SchemaField("reserve_level", "STRING", mode="NULLABLE"),
+    ]),
+    bigquery.SchemaField("atmosphere", "RECORD", mode="NULLABLE", fields=[
+        bigquery.SchemaField("type", "STRING", mode="NULLABLE"),
+        bigquery.SchemaField("composition", "RECORD", mode="REPEATED", fields=[
+            bigquery.SchemaField("type", "STRING", mode="NULLABLE"),
+            bigquery.SchemaField("percentage", "FLOAT", mode="NULLABLE"),
+        ]),
+    ]),
+    bigquery.SchemaField("belts", "RECORD", mode="REPEATED", fields=[
+        bigquery.SchemaField("name", "STRING", mode="NULLABLE"),
+        bigquery.SchemaField("type", "STRING", mode="NULLABLE"),
+        bigquery.SchemaField("mass", "INTEGER", mode="NULLABLE"),
+        bigquery.SchemaField("inner_radius", "INTEGER", mode="NULLABLE"),
+        bigquery.SchemaField("outer_radius", "INTEGER", mode="NULLABLE"),
+    ]),
+    bigquery.SchemaField("composition", "RECORD", mode="REPEATED", fields=[
+        bigquery.SchemaField("type", "STRING", mode="NULLABLE"),
+        bigquery.SchemaField("percentage", "FLOAT", mode="NULLABLE"),
+    ]),
+    bigquery.SchemaField("materials", "RECORD", mode="REPEATED", fields=[
+        bigquery.SchemaField("type", "STRING", mode="NULLABLE"),
+        bigquery.SchemaField("percentage", "FLOAT", mode="NULLABLE"),
+    ]),
+    bigquery.SchemaField("orbit", "RECORD", mode="NULLABLE", fields=[
+        bigquery.SchemaField("period", "FLOAT", mode="NULLABLE"),
+        bigquery.SchemaField("rotational_period", "FLOAT", mode="NULLABLE"),
+        bigquery.SchemaField("tidally_locked", "BOOLEAN", mode="NULLABLE"),
+        bigquery.SchemaField("periapsis", "FLOAT", mode="NULLABLE"),
+        bigquery.SchemaField("eccentricity", "FLOAT", mode="NULLABLE"),
+        bigquery.SchemaField("inclination", "FLOAT", mode="NULLABLE"),
+        bigquery.SchemaField("semimajor_axis", "FLOAT", mode="NULLABLE"),
+        bigquery.SchemaField("axial_tilt", "FLOAT", mode="NULLABLE"),
+    ]),
+    bigquery.SchemaField("parents", "RECORD", mode="REPEATED", fields=[
+        bigquery.SchemaField("type", "STRING", mode="NULLABLE"),
+        bigquery.SchemaField("relative_id", "INTEGER", mode="NULLABLE"),
+    ]),
+    bigquery.SchemaField("rings", "RECORD", mode="REPEATED", fields=[
+        bigquery.SchemaField("name", "STRING", mode="NULLABLE"),
+        bigquery.SchemaField("type", "STRING", mode="NULLABLE"),
+        bigquery.SchemaField("mass", "INTEGER", mode="NULLABLE"),
+        bigquery.SchemaField("inner_radius", "INTEGER", mode="NULLABLE"),
+        bigquery.SchemaField("outer_radius", "INTEGER", mode="NULLABLE"),
+    ]),
+    bigquery.SchemaField("updated", "TIMESTAMP", mode="REQUIRED"),
+]
+
+population = [
+    bigquery.SchemaField("id", "INTEGER", mode="NULLABLE"),
+    bigquery.SchemaField("name", "STRING", mode="NULLABLE"),
+    bigquery.SchemaField("society", "STRING", mode="NULLABLE"),
+    bigquery.SchemaField("factions", "RECORD", mode="REPEATED", fields=[
+        bigquery.SchemaField("id", "INTEGER", mode="NULLABLE"),
+        bigquery.SchemaField("name", "STRING", mode="NULLABLE"),
+        bigquery.SchemaField("allegiance", "STRING", mode="NULLABLE"),
+        bigquery.SchemaField("controlling", "BOOLEAN", mode="NULLABLE"),
+        bigquery.SchemaField("government", "STRING", mode="NULLABLE"),
+        bigquery.SchemaField("influence", "FLOAT", mode="NULLABLE"),
+        bigquery.SchemaField("happiness", "STRING", mode="NULLABLE"),
+        bigquery.SchemaField("player_faction", "BOOLEAN", mode="NULLABLE"),
+        bigquery.SchemaField("states", "RECORD", mode="REPEATED", fields=[
+            bigquery.SchemaField("name", "STRING", mode="NULLABLE"),
+            bigquery.SchemaField("type", "STRING", mode="NULLABLE"),
+        ]),
+    ]),
+    bigquery.SchemaField("updated", "TIMESTAMP", mode="NULLABLE"),
+]
+
+powerplay = [
+    bigquery.SchemaField("id", "INTEGER", mode="NULLABLE"),
+    bigquery.SchemaField("state", "STRING", mode="NULLABLE"),
+    bigquery.SchemaField("power", "RECORD", mode="NULLABLE", fields=[
+        bigquery.SchemaField("name", "STRING", mode="NULLABLE"),
+        bigquery.SchemaField("state", "STRING", mode="NULLABLE"),
+    ]),
+    bigquery.SchemaField("allegiance", "STRING", mode="NULLABLE"),
+    bigquery.SchemaField("government", "STRING", mode="NULLABLE"),
+    bigquery.SchemaField("updated", "TIMESTAMP", mode="NULLABLE"),
+]
+
+stations = [
+    bigquery.SchemaField("id", "INTEGER", mode="NULLABLE"),
+    bigquery.SchemaField("system_id", "INTEGER", mode="NULLABLE"),
+    bigquery.SchemaField("name", "STRING", mode="NULLABLE"),
+    bigquery.SchemaField("type", "STRING", mode="NULLABLE"),
+    bigquery.SchemaField("distance", "FLOAT", mode="NULLABLE"),
+    bigquery.SchemaField("economy", "RECORD", mode="NULLABLE", fields=[
+        bigquery.SchemaField("id", "INTEGER", mode="NULLABLE"),
+        bigquery.SchemaField("type", "STRING", mode="NULLABLE"),
+        bigquery.SchemaField("subtype", "STRING", mode="NULLABLE"),
+    ]),
+    bigquery.SchemaField("services", "RECORD", mode="NULLABLE", fields=[
+        bigquery.SchemaField("market", "BOOLEAN", mode="NULLABLE"),
+        bigquery.SchemaField("shipyard", "BOOLEAN", mode="NULLABLE"),
+        bigquery.SchemaField("outfitting", "BOOLEAN", mode="NULLABLE"),
+        bigquery.SchemaField("other", "STRING", mode="REPEATED"),
+    ]),
+    bigquery.SchemaField("allegiance", "STRING", mode="NULLABLE"),
+    bigquery.SchemaField("faction", "RECORD", mode="NULLABLE", fields=[
+        bigquery.SchemaField("id", "INTEGER", mode="NULLABLE"),
+        bigquery.SchemaField("name", "STRING", mode="NULLABLE"),
+    ]),
+    bigquery.SchemaField("government", "STRING", mode="NULLABLE"),
+    bigquery.SchemaField("updated", "TIMESTAMP", mode="NULLABLE"),
+
+]
+
+systems = [
+    bigquery.SchemaField("id", "INTEGER", mode="NULLABLE"),
+    bigquery.SchemaField("name", "STRING", mode="NULLABLE"),
+    bigquery.SchemaField("coordinates", "RECORD", mode="NULLABLE", fields=[
+        bigquery.SchemaField("x", "FLOAT", mode="NULLABLE"),
+        bigquery.SchemaField("y", "FLOAT", mode="NULLABLE"),
+        bigquery.SchemaField("z", "FLOAT", mode="NULLABLE"),
+        bigquery.SchemaField("coordinates", "STRING", mode="NULLABLE"),
+    ]),
+    bigquery.SchemaField("updated", "TIMESTAMP", mode="NULLABLE"),
+]
+
+
+# EDSM Class
 class edsmObject:
-  def __init__(self, schema=None, filetype=None):
-    self.schema = schema
+  def __init__(self, filetype):
+    assert filetype in file_types
     self.filetype = filetype
+    self.attributes = {
+        'dataset': {
+            'StringValue': 'edsm',
+            'DataType': 'String'
+        }
+    }
+
+    if filetype == 'systems':
+      self.schema = systems
+      self.attributes['table'] = {
+          'StringValue': 'systems',
+          'DataType': 'String'}
+    elif filetype == 'population':
+      self.schema = population
+      self.attributes['table'] = {
+          'StringValue': 'population',
+          'DataType': 'String'}
+    elif filetype == 'bodies':
+      self.schema = bodies
+      self.attributes['table'] = {
+          'StringValue': 'bodies',
+          'DataType': 'String'}
+    elif filetype == 'powerplay':
+      self.schema = powerplay
+      self.attributes['table'] = {
+          'StringValue': 'powerplay',
+          'DataType': 'String'}
+    elif filetype == 'stations':
+      self.schema = stations
+      self.attributes['table'] = {
+          'StringValue': 'stations',
+          'DataType': 'String'}
+    else:
+      self.schema = None
+      self.attributes['table'] = None
 
   @staticmethod
   def __format_faction_states(input_dict):
@@ -274,152 +462,3 @@ class edsmObject:
       raise KeyError
 
     return formatted_json
-
-filetypes = {
-    'bodies': 'https://www.edsm.net/dump/bodies7days.json.gz',
-    'population': 'https://www.edsm.net/dump/systemsPopulated.json.gz',
-    'powerplay': 'https://www.edsm.net/dump/powerPlay.json.gz',
-    'stations': 'https://www.edsm.net/dump/stations.json.gz',
-    'systems': 'https://www.edsm.net/dump/systemsWithCoordinates.json.gz',
-}
-
-bodies = [
-    bigquery.SchemaField("id", "INTEGER", mode="REQUIRED"),
-    bigquery.SchemaField("system_id", "INTEGER", mode="REQUIRED"),
-    bigquery.SchemaField("relative_id", "INTEGER", mode="NULLABLE"),
-    bigquery.SchemaField("name", "STRING", mode="NULLABLE"),
-    bigquery.SchemaField("properties", "RECORD", mode="NULLABLE", fields=[
-        bigquery.SchemaField("type", "STRING", mode="NULLABLE"),
-        bigquery.SchemaField("subtype", "STRING", mode="NULLABLE"),
-        bigquery.SchemaField("distance", "INTEGER", mode="NULLABLE"),
-        bigquery.SchemaField("mass", "FLOAT", mode="NULLABLE"),
-        bigquery.SchemaField("gravity", "FLOAT", mode="NULLABLE"),
-        bigquery.SchemaField("landable", "BOOLEAN", mode="NULLABLE"),
-        bigquery.SchemaField("radius", "FLOAT", mode="NULLABLE"),
-        bigquery.SchemaField("temperature", "INTEGER", mode="NULLABLE"),
-        bigquery.SchemaField("pressure", "FLOAT", mode="NULLABLE"),
-        bigquery.SchemaField("volcanism", "STRING", mode="NULLABLE"),
-        bigquery.SchemaField("terraforming", "STRING", mode="NULLABLE"),
-        bigquery.SchemaField("luminosity", "STRING", mode="NULLABLE"),
-        bigquery.SchemaField("solar_masses", "FLOAT", mode="NULLABLE"),
-        bigquery.SchemaField("solar_radius", "FLOAT", mode="NULLABLE"),
-        bigquery.SchemaField("spectral_class", "STRING", mode="NULLABLE"),
-        bigquery.SchemaField("reserve_level", "STRING", mode="NULLABLE"),
-    ]),
-    bigquery.SchemaField("atmosphere", "RECORD", mode="NULLABLE", fields=[
-        bigquery.SchemaField("type", "STRING", mode="NULLABLE"),
-        bigquery.SchemaField("composition", "RECORD", mode="REPEATED", fields=[
-            bigquery.SchemaField("type", "STRING", mode="NULLABLE"),
-            bigquery.SchemaField("percentage", "FLOAT", mode="NULLABLE"),
-        ]),
-    ]),
-    bigquery.SchemaField("belts", "RECORD", mode="REPEATED", fields=[
-        bigquery.SchemaField("name", "STRING", mode="NULLABLE"),
-        bigquery.SchemaField("type", "STRING", mode="NULLABLE"),
-        bigquery.SchemaField("mass", "INTEGER", mode="NULLABLE"),
-        bigquery.SchemaField("inner_radius", "INTEGER", mode="NULLABLE"),
-        bigquery.SchemaField("outer_radius", "INTEGER", mode="NULLABLE"),
-    ]),
-    bigquery.SchemaField("composition", "RECORD", mode="REPEATED", fields=[
-        bigquery.SchemaField("type", "STRING", mode="NULLABLE"),
-        bigquery.SchemaField("percentage", "FLOAT", mode="NULLABLE"),
-    ]),
-    bigquery.SchemaField("materials", "RECORD", mode="REPEATED", fields=[
-        bigquery.SchemaField("type", "STRING", mode="NULLABLE"),
-        bigquery.SchemaField("percentage", "FLOAT", mode="NULLABLE"),
-    ]),
-    bigquery.SchemaField("orbit", "RECORD", mode="NULLABLE", fields=[
-        bigquery.SchemaField("period", "FLOAT", mode="NULLABLE"),
-        bigquery.SchemaField("rotational_period", "FLOAT", mode="NULLABLE"),
-        bigquery.SchemaField("tidally_locked", "BOOLEAN", mode="NULLABLE"),
-        bigquery.SchemaField("periapsis", "FLOAT", mode="NULLABLE"),
-        bigquery.SchemaField("eccentricity", "FLOAT", mode="NULLABLE"),
-        bigquery.SchemaField("inclination", "FLOAT", mode="NULLABLE"),
-        bigquery.SchemaField("semimajor_axis", "FLOAT", mode="NULLABLE"),
-        bigquery.SchemaField("axial_tilt", "FLOAT", mode="NULLABLE"),
-    ]),
-    bigquery.SchemaField("parents", "RECORD", mode="REPEATED", fields=[
-        bigquery.SchemaField("type", "STRING", mode="NULLABLE"),
-        bigquery.SchemaField("relative_id", "INTEGER", mode="NULLABLE"),
-    ]),
-    bigquery.SchemaField("rings", "RECORD", mode="REPEATED", fields=[
-        bigquery.SchemaField("name", "STRING", mode="NULLABLE"),
-        bigquery.SchemaField("type", "STRING", mode="NULLABLE"),
-        bigquery.SchemaField("mass", "INTEGER", mode="NULLABLE"),
-        bigquery.SchemaField("inner_radius", "INTEGER", mode="NULLABLE"),
-        bigquery.SchemaField("outer_radius", "INTEGER", mode="NULLABLE"),
-    ]),
-    bigquery.SchemaField("updated", "TIMESTAMP", mode="REQUIRED"),
-]
-
-population = [
-    bigquery.SchemaField("id", "INTEGER", mode="NULLABLE"),
-    bigquery.SchemaField("name", "STRING", mode="NULLABLE"),
-    bigquery.SchemaField("society", "STRING", mode="NULLABLE"),
-    bigquery.SchemaField("factions", "RECORD", mode="REPEATED", fields=[
-        bigquery.SchemaField("id", "INTEGER", mode="NULLABLE"),
-        bigquery.SchemaField("name", "STRING", mode="NULLABLE"),
-        bigquery.SchemaField("allegiance", "STRING", mode="NULLABLE"),
-        bigquery.SchemaField("controlling", "BOOLEAN", mode="NULLABLE"),
-        bigquery.SchemaField("government", "STRING", mode="NULLABLE"),
-        bigquery.SchemaField("influence", "FLOAT", mode="NULLABLE"),
-        bigquery.SchemaField("happiness", "STRING", mode="NULLABLE"),
-        bigquery.SchemaField("player_faction", "BOOLEAN", mode="NULLABLE"),
-        bigquery.SchemaField("states", "RECORD", mode="REPEATED", fields=[
-            bigquery.SchemaField("name", "STRING", mode="NULLABLE"),
-            bigquery.SchemaField("type", "STRING", mode="NULLABLE"),
-        ]),
-    ]),
-    bigquery.SchemaField("updated", "TIMESTAMP", mode="NULLABLE"),
-]
-
-powerplay = [
-    bigquery.SchemaField("id", "INTEGER", mode="NULLABLE"),
-    bigquery.SchemaField("state", "STRING", mode="NULLABLE"),
-    bigquery.SchemaField("power", "RECORD", mode="NULLABLE", fields=[
-        bigquery.SchemaField("name", "STRING", mode="NULLABLE"),
-        bigquery.SchemaField("state", "STRING", mode="NULLABLE"),
-    ]),
-    bigquery.SchemaField("allegiance", "STRING", mode="NULLABLE"),
-    bigquery.SchemaField("government", "STRING", mode="NULLABLE"),
-    bigquery.SchemaField("updated", "TIMESTAMP", mode="NULLABLE"),
-]
-
-stations = [
-    bigquery.SchemaField("id", "INTEGER", mode="NULLABLE"),
-    bigquery.SchemaField("system_id", "INTEGER", mode="NULLABLE"),
-    bigquery.SchemaField("name", "STRING", mode="NULLABLE"),
-    bigquery.SchemaField("type", "STRING", mode="NULLABLE"),
-    bigquery.SchemaField("distance", "FLOAT", mode="NULLABLE"),
-    bigquery.SchemaField("economy", "RECORD", mode="NULLABLE", fields=[
-        bigquery.SchemaField("id", "INTEGER", mode="NULLABLE"),
-        bigquery.SchemaField("type", "STRING", mode="NULLABLE"),
-        bigquery.SchemaField("subtype", "STRING", mode="NULLABLE"),
-    ]),
-    bigquery.SchemaField("services", "RECORD", mode="NULLABLE", fields=[
-        bigquery.SchemaField("market", "BOOLEAN", mode="NULLABLE"),
-        bigquery.SchemaField("shipyard", "BOOLEAN", mode="NULLABLE"),
-        bigquery.SchemaField("outfitting", "BOOLEAN", mode="NULLABLE"),
-        bigquery.SchemaField("other", "STRING", mode="REPEATED"),
-    ]),
-    bigquery.SchemaField("allegiance", "STRING", mode="NULLABLE"),
-    bigquery.SchemaField("faction", "RECORD", mode="NULLABLE", fields=[
-        bigquery.SchemaField("id", "INTEGER", mode="NULLABLE"),
-        bigquery.SchemaField("name", "STRING", mode="NULLABLE"),
-    ]),
-    bigquery.SchemaField("government", "STRING", mode="NULLABLE"),
-    bigquery.SchemaField("updated", "TIMESTAMP", mode="NULLABLE"),
-
-]
-
-systems = [
-    bigquery.SchemaField("id", "INTEGER", mode="NULLABLE"),
-    bigquery.SchemaField("name", "STRING", mode="NULLABLE"),
-    bigquery.SchemaField("coordinates", "RECORD", mode="NULLABLE", fields=[
-        bigquery.SchemaField("x", "FLOAT", mode="NULLABLE"),
-        bigquery.SchemaField("y", "FLOAT", mode="NULLABLE"),
-        bigquery.SchemaField("z", "FLOAT", mode="NULLABLE"),
-        bigquery.SchemaField("coordinates", "STRING", mode="NULLABLE"),
-    ]),
-    bigquery.SchemaField("updated", "TIMESTAMP", mode="NULLABLE"),
-]

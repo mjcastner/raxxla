@@ -1,25 +1,110 @@
+import gzip
+import io
 import json
+import os
 import pprint
+import re
+import sys
 
-import boto3
+from multiprocessing import Pool
+from urllib import error as urllib_error
+from urllib import request
 
+from absl import app, flags, logging
 from edsm import schema
-from lib import bigquery
+from lib import sqs
+
 
 # Global vars
-secrets_manager = boto3.client('secretsmanager')
+file_types_meta = schema.file_types.copy()
+file_types_meta.append('all')
 
-body_example = """{"id":200708523,"id64":1910626103101891682,"bodyId":53,"name":"Scheau Flyi FR-I c11-4001 5 e","type":"Planet","subType":"Icy body","parents":[{"Planet":46},{"Null":45},{"Star":0}],"distanceToArrival":1974,"isLandable":true,"gravity":0.11906001790580703,"earthMasses":0.008324,"radius":1686.427125,"surfaceTemperature":113,"surfacePressure":0,"volcanismType":"No volcanism","atmosphereType":"No atmosphere","atmosphereComposition":null,"solidComposition":{"Ice":61.5,"Rock":35,"Metal":3.5},"terraformingState":"Not terraformable","orbitalPeriod":23.576945891203703,"semiMajorAxis":0.027471439565081992,"orbitalEccentricity":0.012632,"orbitalInclination":-0.096603,"argOfPeriapsis":60.414013,"rotationalPeriod":-23.57722511574074,"rotationalPeriodTidallyLocked":false,"axialTilt":-2.458487,"materials":{"Sulphur":24.83,"Carbon":20.88,"Iron":14.47,"Phosphorus":13.37,"Nickel":10.95,"Chromium":6.51,"Germanium":4.15,"Arsenic":1.85,"Cadmium":1.12,"Niobium":0.99,"Ruthenium":0.89},"updateTime":"2020-05-03 04:03:45","systemId":51892223,"systemId64":1099861096801378,"systemName":"Scheau Flyi FR-I c11-4001"}"""
-population_example = """{"id":4620,"id64":1968999188851,"name":"HIP 116663","coords":{"x":56.96875,"y":-262.59375,"z":106.8125},"allegiance":"Empire","government":"Corporate","state":"None","economy":"Extraction","security":"Low","population":3686,"controllingFaction":{"id":11148,"name":"HIP 116663 Industries","allegiance":"Empire","government":"Corporate","isPlayer":false},"factions":[{"id":11148,"name":"HIP 116663 Industries","allegiance":"Empire","government":"Corporate","influence":0.722,"state":"None","activeStates":[],"recoveringStates":[],"pendingStates":[],"happiness":"Happy","isPlayer":false,"lastUpdate":1587414628},{"id":74727,"name":"Friends of HIP 116663","allegiance":"Independent","government":"Cooperative","influence":0.121,"state":"None","activeStates":[],"recoveringStates":[],"pendingStates":[],"happiness":"Happy","isPlayer":false,"lastUpdate":1587414628},{"id":8996,"name":"Gaunetet Autocracy","allegiance":"Empire","government":"Dictatorship","influence":0.115,"state":"None","activeStates":[],"recoveringStates":[],"pendingStates":[],"happiness":"Happy","isPlayer":false,"lastUpdate":1587414628},{"id":74726,"name":"HIP 116663 Gold Partnership","allegiance":"Independent","government":"Anarchy","influence":0.042,"state":"None","activeStates":[],"recoveringStates":[],"pendingStates":[],"happiness":"Happy","isPlayer":false,"lastUpdate":1587414628},{"id":81923,"name":"Pilots' Federation Local Branch","allegiance":"Pilots Federation","government":"Democracy","influence":0,"state":"None","activeStates":[],"recoveringStates":[],"pendingStates":[],"happiness":"None","isPlayer":false,"lastUpdate":1587414628}],"stations":[{"id":19977,"marketId":3222455808,"type":"Outpost","name":"Mies van der Rohe Port","distanceToArrival":956.021851,"allegiance":"Empire","government":"Corporate","economy":"Extraction","secondEconomy":null,"haveMarket":true,"haveShipyard":false,"haveOutfitting":true,"otherServices":["Refuel","Repair","Contacts","Universal Cartographics","Missions","Crew Lounge","Tuning","Interstellar Factors Contact","Search and Rescue"],"controllingFaction":{"id":11148,"name":"HIP 116663 Industries"},"updateTime":{"information":"2020-04-20 20:36:30","market":"2020-04-20 20:36:49","shipyard":null,"outfitting":"2020-04-20 20:36:36"}}],"bodies":[{"id":5229200,"id64":1968999188851,"bodyId":0,"name":"HIP 116663","type":"Star","subType":"G (White-Yellow) Star","parents":null,"distanceToArrival":0,"isMainStar":true,"isScoopable":true,"age":8682,"spectralClass":"G3","luminosity":"V","absoluteMagnitude":5.095779,"solarMasses":1.003906,"solarRadius":0.9981383867721064,"surfaceTemperature":5691,"orbitalPeriod":null,"semiMajorAxis":null,"orbitalEccentricity":null,"orbitalInclination":null,"argOfPeriapsis":null,"rotationalPeriod":3.245189887152778,"rotationalPeriodTidallyLocked":false,"axialTilt":null,"updateTime":"2018-04-10 19:47:47"},{"id":12484948,"id64":36030766018152819,"bodyId":1,"name":"HIP 116663 1","type":"Planet","subType":"Earth-like world","parents":[{"Star":0}],"distanceToArrival":678,"isLandable":false,"gravity":1.3065799302008865,"earthMasses":1.516222,"radius":6870.6515,"surfaceTemperature":291,"surfacePressure":0.6845017579570688,"volcanismType":"Major Rocky Magma","atmosphereType":"Suitable for water-based life","atmosphereComposition":{"Nitrogen":70.42,"Oxygen":26.75,"Water":2.63},"solidComposition":{"Rock":66.74,"Metal":33.26,"Ice":0},"terraformingState":null,"orbitalPeriod":576.2173611111111,"semiMajorAxis":1.3583058306992333,"orbitalEccentricity":9.2e-5,"orbitalInclination":-0.000551,"argOfPeriapsis":11.658712,"rotationalPeriod":1.061444046585648,"rotationalPeriodTidallyLocked":false,"axialTilt":-0.103593,"updateTime":"2020-04-20 20:32:48"},{"id":12484942,"id64":108088360056080755,"bodyId":3,"name":"HIP 116663 2","type":"Planet","subType":"Water world","parents":[{"Null":2},{"Star":0}],"distanceToArrival":956,"isLandable":false,"gravity":0.9049638175992278,"earthMasses":0.596996,"radius":5180.2965,"surfaceTemperature":247,"surfacePressure":0.8327857451270664,"volcanismType":"No volcanism","atmosphereType":"Nitrogen","atmosphereComposition":{"Nitrogen":78.82,"Oxygen":11.02,"Carbon dioxide":9.64},"solidComposition":{"Rock":65.33,"Metal":34.67,"Ice":0},"terraformingState":null,"orbitalPeriod":56.243489583333336,"semiMajorAxis":0.0014558268174601765,"orbitalEccentricity":0.069664,"orbitalInclination":-4.439311,"argOfPeriapsis":214.847015,"rotationalPeriod":-93.7974826388889,"rotationalPeriodTidallyLocked":false,"axialTilt":3.003969,"updateTime":"2020-04-20 20:31:27"},{"id":2609380,"id64":144117157075044723,"bodyId":4,"name":"HIP 116663 3","type":"Planet","subType":"High metal content world","parents":[{"Null":2},{"Star":0}],"distanceToArrival":954,"isLandable":false,"gravity":0.7189241760794304,"earthMasses":0.335159,"radius":4354.802,"surfaceTemperature":278,"surfacePressure":2.740016654330126,"volcanismType":"No volcanism","atmosphereType":"Carbon dioxide-rich","atmosphereComposition":{"Nitrogen":74.27,"Carbon dioxide":25.46,"Sulphur dioxide":0.25},"solidComposition":{"Rock":66.74,"Metal":33.26,"Ice":0},"terraformingState":"Not terraformable","orbitalPeriod":56.243489583333336,"semiMajorAxis":0.002593171026999116,"orbitalEccentricity":0.069664,"orbitalInclination":-4.439311,"argOfPeriapsis":34.847023,"rotationalPeriod":70.27979745370371,"rotationalPeriodTidallyLocked":true,"axialTilt":0.50913,"updateTime":"2020-04-20 20:31:47"},{"id":12484957,"id64":180145954094008691,"bodyId":5,"name":"HIP 116663 4","type":"Planet","subType":"Rocky Ice world","parents":[{"Star":0}],"distanceToArrival":1533,"isLandable":false,"gravity":0.8967342101995956,"earthMasses":1.408597,"radius":7993.6665,"surfaceTemperature":149,"surfacePressure":249.89805082654823,"volcanismType":"Major Water Geysers","atmosphereType":"Thick Argon-rich","atmosphereComposition":{"Nitrogen":99.68,"Argon":0.31},"solidComposition":{"Ice":45.32,"Rock":36.49,"Metal":18.19},"terraformingState":null,"orbitalPeriod":1973.2535185185186,"semiMajorAxis":3.085995294129544,"orbitalEccentricity":0.007177,"orbitalInclination":0.000418,"argOfPeriapsis":333.223114,"rotationalPeriod":0.7826308412962963,"rotationalPeriodTidallyLocked":false,"axialTilt":-0.24369,"updateTime":"2020-04-20 20:32:40"},{"id":12484952,"id64":252203548131936627,"bodyId":7,"name":"HIP 116663 5","type":"Planet","subType":"Class II gas giant","parents":[{"Star":0}],"distanceToArrival":4016,"isLandable":false,"gravity":7.641825783872989,"earthMasses":943.039063,"radius":70851.784,"surfaceTemperature":235,"surfacePressure":null,"volcanismType":"No volcanism","atmosphereType":"No atmosphere","atmosphereComposition":{"Hydrogen":73.53,"Helium":26.47},"solidComposition":null,"terraformingState":null,"orbitalPeriod":9153.67925925926,"semiMajorAxis":8.583620043517103,"orbitalEccentricity":0.330521,"orbitalInclination":-40.993511,"argOfPeriapsis":304.942871,"rotationalPeriod":0.6541508427430555,"rotationalPeriodTidallyLocked":false,"axialTilt":-0.074304,"updateTime":"2020-04-20 20:32:32"}],"date":"2016-05-29 00:14:33"}"""
-powerplay_example = """{"power":"Edmund Mahon","powerState":"Exploited","id":7610,"id64":13865899337177,"name":"Varli","coords":{"x":63.25,"y":6.15625,"z":120.03125},"allegiance":"Federation","government":"Democracy","state":"None","date":"2020-04-10 05:17:44"}"""
-station_example = """{"id":63385,"marketId":null,"type":"Mega ship","name":"Rescue Ship - Cyllene Orbital","distanceToArrival":12643.389648,"allegiance":"Pilots Federation","government":"Democracy","economy":"Rescue","secondEconomy":null,"haveMarket":true,"haveShipyard":false,"haveOutfitting":true,"otherServices":["Restock","Refuel","Repair","Contacts","Missions","Tuning","Search and Rescue"],"controllingFaction":{"id":80576,"name":"Pilots Federation Local Branch"},"updateTime":{"information":"2018-01-11 06:50:38","market":"2018-01-11 07:00:36","shipyard":null,"outfitting":"2018-01-11 06:48:03"},"systemId":23595,"systemId64":254709589156,"systemName":"Atlas"}"""
-system_example = """{"name":"Plaa Aescs IP-L b38-1","coords":{"x":-2424.34375,"y":600.8125,"z":7440.78125},"id":39923973,"id64":2837499031881,"date":"2020-03-04 00:00:02"}"""
+# Define flags
+FLAGS = flags.FLAGS
+flags.DEFINE_integer('batch_size',
+                     500,
+                     'Default job batch size for processing and loading',
+                     lower_bound=1)
+flags.DEFINE_string(
+    'download_dir',
+    '/tmp',
+    'Local directory in which to temporarily store EDSM files.')
+flags.DEFINE_enum('type', None, file_types_meta, 'Input file type.')
+flags.DEFINE_string('sqs_queue', None, 'SQS Queue name.')
+flags.mark_flag_as_required('type')
+flags.mark_flag_as_required('sqs_queue')
 
-obj = schema.edsmObject(schema=schema.systems, filetype='systems')
-formatted_json = obj.format_json(system_example)
-pprint.pprint(json.loads(formatted_json))
-print()
 
-bq_client = bq_utils.aws_bq_client('gcp_raxxla_bridge')
-dataset = bq_client.dataset('raxxla.edsm')
-print(dataset)
+def fetch_edsm_file(filetype: str) -> io.BufferedReader:
+  edsm_file_url = schema.urls.get(filetype)
+  gz_filepath = '%s/%s.gz' % (FLAGS.download_dir, filetype)
+
+  # Fetch GZ from EDSM
+  logging.info('Fetching %s...', edsm_file_url)
+  try:
+    with request.urlopen(edsm_file_url) as response:
+      gz_data = response.read()
+
+      with open(gz_filepath, 'wb') as gz_file:
+        gz_file.write(gz_data)
+        logging.info('Saved to %s...', gz_filepath)
+  except (urllib_error.URLError, urllib_error.HTTPError) as e:
+    logging.error('Error fetching %s file: %s', filetype, e)
+
+  return open(gz_filepath, 'rb')
+
+
+def process_edsm_file(filetype: str, gz_file: io.BufferedReader):
+  sqs_batch = []
+
+  with gzip.open(gz_file, mode='rt') as uncompressed_file:
+    for line in uncompressed_file:
+      if len(sqs_batch) < FLAGS.batch_size:
+        json_object_match = re.search(r'(\{.*\})', line)
+        if json_object_match:
+          json_object = json_object_match.group(1)
+          edsm_object = schema.edsmObject(filetype)
+          parsed_json = edsm_object.format_json(json_object)
+          sqs_batch.append(parsed_json)
+      else:
+        sqs_body = json.dumps(sqs_batch)
+        sqs_response = sqs.send_message(
+            queue_name=FLAGS.sqs_queue,
+            message_content=sqs_body,
+            message_attributes=edsm_object.attributes)
+        if sqs_response:
+          logging.info(
+              '[EDSM/%s] batch of %s sent to "%s" SQS queue.',
+              filetype,
+              len(sqs_batch),
+              FLAGS.sqs_queue)
+          sqs_batch.clear()
+
+    sqs_body = json.dumps(sqs_batch)
+    sqs_response = sqs.send_message(
+        queue_name=FLAGS.sqs_queue,
+        message_content=sqs_body,
+        message_attributes=edsm_object.attributes)
+    if sqs_response:
+      logging.info(
+          '[EDSM/%s] batch of %s sent to "%s" SQS queue.',
+          filetype,
+          len(sqs_batch),
+          FLAGS.sqs_queue)
+      sqs_batch.clear()
+
+
+def main(argv):
+  del argv
+
+  if FLAGS.type == 'all':
+    with Pool(5) as fetch_pool:
+      edsm_file_objects = fetch_pool.map(fetch_edsm_file, schema.file_types)
+      #fetch_pool.map(process_edsm_file, edsm_file_objects)
+  else:
+    edsm_file_object = fetch_edsm_file(FLAGS.type)
+    process_edsm_file(FLAGS.type, edsm_file_object)
+
+
+if __name__ == '__main__':
+  app.run(main)
