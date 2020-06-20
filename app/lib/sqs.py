@@ -11,7 +11,7 @@ def _get_queue(queue_name: str):
 
 def get_queue_size(queue_name: str) -> int:
   message_queue = _get_queue(queue_name)
-  return message_queue.attributes.get('ApproximateNumberOfMessages')
+  return int(message_queue.attributes.get('ApproximateNumberOfMessages'))
 
 
 def receive_message(queue_name: str,

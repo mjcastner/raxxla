@@ -62,7 +62,7 @@ def process_edsm_file(filetype: str, gz_filepath: str) -> bool:
             json_object = json_object_match.group(1)
             edsm_object = schema.edsmObject(filetype)
             parsed_json = edsm_object.format_json(json_object)
-            sqs_batch.append(parsed_json)
+            sqs_batch.append(json.loads(parsed_json))
         else:
           sqs_body = json.dumps(sqs_batch)
           sqs_response = sqs.send_message(
