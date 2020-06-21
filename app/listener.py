@@ -51,11 +51,17 @@ def load_rows(bigquery_client: bigquery.client, row_batch: list,
 def main(argv):
   bigquery_client = bigquery.client(FLAGS.service_account_secret)
   queue_size = sqs.get_queue_size(queue_name=FLAGS.sqs_queue)
+  logging.info('Starting BigQuery row streaming service from %s SQS queue...',
+               FLAGS.sqs_queue)
 
   while queue_size > 0:
     message_batch = sqs.receive_message(queue_name=FLAGS.sqs_queue)
+
     for message in message_batch:
       row_batch = json.loads(message.body)
+      logging.info('Loading batch of %s rows...', len(row_batch))
+
+      # pprint.pprint(row_batch)
       streaming_status = load_rows(
           bigquery_client,
           row_batch,
@@ -63,9 +69,12 @@ def main(argv):
       )
 
       if streaming_status:
+        logging.info('Rows loaded successfully!')
         message.delete()
 
     queue_size = sqs.get_queue_size(queue_name=FLAGS.sqs_queue)
+  
+  logging.info('SQS queue %s contains no additional messages.', FLAGS.sqs_queue)
 
 
 if __name__ == '__main__':

@@ -3,7 +3,7 @@ import boto3
 
 
 sqs_client = boto3.resource('sqs')
-
+message_byte_limit = 200000
 
 def _get_queue(queue_name: str):
   return sqs_client.get_queue_by_name(QueueName=queue_name)

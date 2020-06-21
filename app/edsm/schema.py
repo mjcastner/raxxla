@@ -168,8 +168,6 @@ class edsmObject:
         }
     }
 
-    # TODO(mjcastner): Add self.batch_size for each file to get around SQS
-    # message size issue.
     if filetype == 'systems':
       self.schema = systems
       self.attributes['table'] = {

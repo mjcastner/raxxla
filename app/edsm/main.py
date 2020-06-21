@@ -2,6 +2,7 @@ import gzip
 import json
 import os
 import re
+import sys
 
 from multiprocessing import Pool
 from urllib import error as urllib_error
@@ -52,11 +53,15 @@ def fetch_edsm_file(filetype: str) -> tuple:
 def process_edsm_file(filetype: str, gz_filepath: str) -> bool:
   gz_file = open(gz_filepath, 'rb')
   sqs_batch = []
+  sqs_batch_bytes = sys.getsizeof(json.dumps(sqs_batch))
 
   try:
     with gzip.open(gz_file, mode='rt') as uncompressed_file:
       for line in uncompressed_file:
-        if len(sqs_batch) < FLAGS.batch_size:
+        if (
+            len(sqs_batch) < FLAGS.batch_size 
+            and sqs_batch_bytes < sqs.message_byte_limit
+        ):
           json_object_match = re.search(r'(\{.*\})', line)
           if json_object_match:
             json_object = json_object_match.group(1)
@@ -64,6 +69,10 @@ def process_edsm_file(filetype: str, gz_filepath: str) -> bool:
             parsed_json = edsm_object.format_json(json_object)
             sqs_batch.append(json.loads(parsed_json))
         else:
+          logging.info('[EDSM/%s] Sending batch of %s rows (%s bytes)...',
+                       filetype,
+                       len(sqs_batch),
+                       sqs_batch_bytes)
           sqs_body = json.dumps(sqs_batch)
           sqs_response = sqs.send_message(
               queue_name=FLAGS.sqs_queue,
@@ -71,11 +80,11 @@ def process_edsm_file(filetype: str, gz_filepath: str) -> bool:
               message_attributes=edsm_object.attributes)
           if sqs_response:
             logging.info(
-                '[EDSM/%s] batch of %s sent to "%s" SQS queue',
+                '[EDSM/%s] Batch successfully sent to "%s" SQS queue',
                 filetype,
-                len(sqs_batch),
                 FLAGS.sqs_queue)
             sqs_batch.clear()
+        sqs_batch_bytes = sys.getsizeof(json.dumps(sqs_batch))
 
       sqs_body = json.dumps(sqs_batch)
       sqs_response = sqs.send_message(
