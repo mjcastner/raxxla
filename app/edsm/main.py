@@ -6,6 +6,7 @@ import time
 
 from lib import gcs
 from lib import pubsub
+from multiprocessing import Pool
 
 from absl import app, flags, logging
 
@@ -51,21 +52,29 @@ def main(argv):
 
   if FLAGS.file_type == 'all':
     logging.info('Processing all EDSM files...')
-    gcs_files = [fetch_edsm_file(x, schema.urls[x]) for x in schema.file_types]
+    with Pool(len(schema.file_types)) as pool:
+      gcs_files = pool.starmap(fetch_edsm_file, schema.urls.items())
+      bq_tables = ['%s.edsm.%s' % (FLAGS.project_id, file) for file in schema.file_types]
+      gcs_table_mapping = zip(gcs_files, bq_tables)
+      pubsub_responses = [process_edsm_file(x[0], x[1]) for x in gcs_table_mapping]
   else:
     gcs_file = fetch_edsm_file(FLAGS.file_type, schema.urls[FLAGS.file_type])
     bq_table = '%s.edsm.%s' % (FLAGS.project_id, FLAGS.file_type)
     pubsub_responses = process_edsm_file(gcs_file, bq_table)
 
   logging.info('%s messages in flight...', len(pubsub_responses))
+  errors = []
+
   while pubsub_responses:
-    errors = [x for x in pubsub_responses if x.exception()]
+    batch_errors = [x for x in pubsub_responses if x.exception()]
+    errors.append(batch_errors)
     pubsub_responses = [x for x in pubsub_responses if not x.done()]
     time.sleep(5)
 
-  logging.info('Message processing complete.')
-  if errors:
+  logging.info('Message processing complete!')
+  if len(errors) > 1:
     [logging.error(x) for x in errors]
+
 
 if __name__ == '__main__':
   app.run(main)

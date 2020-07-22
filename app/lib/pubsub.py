@@ -11,18 +11,24 @@ flags.mark_flag_as_required('project_id')
 flags.mark_flag_as_required('pubsub_topic')
 
 # Global vars
-pubsub_client = pubsub.PublisherClient(
+PUBLISHER = pubsub.PublisherClient(
     batch_settings=types.BatchSettings(max_messages=500),
 )
+SUBSCRIBER = pubsub.SubscriberClient()
 
 
-def send_bigquery_row(row_json, table):
+def send_bigquery_row(row_json: str, table: str):
   logging.info('Sending message')
-  topic_path = pubsub_client.topic_path(FLAGS.project_id, FLAGS.pubsub_topic)
-  response_future = pubsub_client.publish(
+  topic_path = PUBLISHER.topic_path(FLAGS.project_id, FLAGS.pubsub_topic)
+  response_future = PUBLISHER.publish(
       topic_path,
       data=row_json.encode("utf-8"),
       table=table,
   )
 
   return response_future
+
+
+def fetch_bigquery_batch(batch_size: int):
+  logging.info('Fetching message batch (%s messages)...', batch_size)
+  print(dir(SUBSCRIBER))
