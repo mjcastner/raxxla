@@ -26,7 +26,7 @@ def fetch_edsm_file(file_type: str, url: str):
 
 
 def process_edsm_file(gcs_file: io.BytesIO, bq_table: str):
-  errors = []
+  pubsub_responses = []
 
   logging.info('Extracting JSON rows and sending to Pub/Sub...')
   with gzip.GzipFile(fileobj=gcs_file, mode='rb') as file:
@@ -37,17 +37,13 @@ def process_edsm_file(gcs_file: io.BytesIO, bq_table: str):
         if json_re_match:
           json_string = json_re_match.group(1)
           response = pubsub.send_bigquery_row(json_string, bq_table)
-          errors.append(response)
+          pubsub_responses.append(response)
       except ValueError:
         logging.error('Failed to process JSON string: %s', json_string)
       except AttributeError:
         logging.error('Failed to process JSON string: %s', json_string)
-  
-  while errors:
-    time.sleep(5)
-    print(len(errors))
 
-  return errors
+  return pubsub_responses
 
 
 def main(argv):
@@ -59,14 +55,17 @@ def main(argv):
   else:
     gcs_file = fetch_edsm_file(FLAGS.file_type, schema.urls[FLAGS.file_type])
     bq_table = '%s.edsm.%s' % (FLAGS.project_id, FLAGS.file_type)
-    errors = process_edsm_file(gcs_file, bq_table)
-  # response = pubsub.send_bigquery_row('Test body.', 'raxxla.edsm.test')
+    pubsub_responses = process_edsm_file(gcs_file, bq_table)
 
-  # while not response.done():
-  #   time.sleep(5)
+  logging.info('%s messages in flight...', len(pubsub_responses))
+  while pubsub_responses:
+    errors = [x for x in pubsub_responses if x.exception()]
+    pubsub_responses = [x for x in pubsub_responses if not x.done()]
+    time.sleep(5)
 
-  # print(response.done())
-  # print(response.exception())
+  logging.info('Message processing complete.')
+  if errors:
+    [logging.error(x) for x in errors]
 
 if __name__ == '__main__':
   app.run(main)
