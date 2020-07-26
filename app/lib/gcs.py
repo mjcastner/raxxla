@@ -5,17 +5,21 @@ import urllib.error
 from absl import flags, logging
 from google.cloud import storage
 
+# Global vars
+GCS_CLIENT = storage.Client()
+
+# Define flags
 FLAGS = flags.FLAGS
 flags.DEFINE_string('gcs_bucket', None, 'Google Cloud Storage bucket ID.')
 flags.mark_flag_as_required('gcs_bucket')
+
 
 def fetch_url(destination_path: str, url: str):
   logging.info(
       'Saving %s to Google Cloud Storage as gs://%s...',
       url,
       destination_path)
-  gcs_client = storage.Client()
-  gcs_bucket = gcs_client.bucket(FLAGS.gcs_bucket)
+  gcs_bucket = GCS_CLIENT.bucket(FLAGS.gcs_bucket)
   gcs_blob = gcs_bucket.blob(destination_path)
 
   try:
