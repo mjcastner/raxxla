@@ -1,31 +1,19 @@
 import json
-
-from lib import pubsub
+from lib import bigquery, pubsub
 from pprint import pprint
 
 from absl import app, flags, logging
-from google.cloud import bigquery
-
-import pandas
-
-# Global variables
-STREAMING_BATCH_SIZE = 500
-BQ_CLIENT = bigquery.Client()
 
 # Define flags
 FLAGS = flags.FLAGS
 flags.DEFINE_integer(
     'batch_size',
-    STREAMING_BATCH_SIZE,
+    bigquery.STREAMING_BATCH_SIZE,
     'Rows to process in a given streaming batch.',
     lower_bound=1,
 )
 
-
-def main(argv):
-  del argv
-
-  messages = pubsub.fetch_bigquery_batch(FLAGS.batch_size)
+def format_messages(messages):
   bq_tables = {x.message.attributes.get('table') for x in messages}
   bq_rows = {x:[] for x in bq_tables}
 
@@ -34,14 +22,18 @@ def main(argv):
     row = json.loads(msg.message.data)
     row_batch = bq_rows.get(table)
     row_batch.append(row)
-  
-  for table, rows in bq_rows.items():
-    print(table, len(rows))
-  
-  #test_df = pandas.DataFrame(row_batch)
-  #print(test_df)
-  #BQ_CLIENT.insert_rows_from_dataframe('', test_df)
-  #pubsub.ack_message_batch(messages)
+
+  return bq_rows
+
+
+def main(argv):
+  del argv
+
+  messages = pubsub.fetch_bigquery_batch(FLAGS.batch_size)
+  rows = format_messages(messages)
+
+  for table, rows in rows.items():
+    bigquery.stream_records(table, rows)
 
 
 if __name__ == '__main__':

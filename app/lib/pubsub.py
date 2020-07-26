@@ -1,7 +1,5 @@
 import time
 
-from concurrent.futures import TimeoutError
-
 from absl import flags
 from absl import logging
 from google.cloud import pubsub
