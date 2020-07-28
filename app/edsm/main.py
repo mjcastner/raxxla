@@ -5,6 +5,7 @@ import tempfile
 
 from lib import bigquery
 from lib import gcs
+from lib import utils
 from multiprocessing import Pool
 
 from absl import app, flags, logging
@@ -43,26 +44,27 @@ def fetch_edsm_file(file_type: str, url: str):
 
 
 def generate_ndjson(file_type: str, gcs_blob):
+  gcs_path = '%s/%s.ndjson' % (DATASET, file_type)
+  gcs_uri = gcs.get_gcs_uri(gcs_path)
+  logging.info('Generating NDJSON file at %s...', gcs_uri)
   gcs_file = io.BytesIO(gcs_blob.download_as_string())
   ndjson_file = tempfile.TemporaryFile()
   with gzip.GzipFile(fileobj=gcs_file, mode='rb') as file:
     for line in file:
       try:
-        json_string = None
         json_re_match = re.search(r'(\{.*\})', line.decode())
         if json_re_match:
           json_string = json_re_match.group(1)
-          ndjson_file.write(json_string.encode())
+          edsm_object = utils.edsmObject(file_type, json_string)
+          formatted_json_string = edsm_object.format_json()
+          ndjson_file.write(formatted_json_string.encode())
           ndjson_file.write(b'\n')
       except ValueError:
-        logging.error('Failed to process JSON string: %s', json_string)
+        logging.error('Failed to process JSON string: %s', line)
       except AttributeError:
-        logging.error('Failed to process JSON string: %s', json_string)
+        logging.error('Failed to process JSON string: %s', line)
 
   ndjson_file.seek(0)
-  gcs_path = '%s/%s.ndjson' % (DATASET, file_type)
-  gcs_uri = gcs.get_gcs_uri(gcs_path)
-  logging.info('Generating NDJSON file at %s...', gcs_uri)
   ndjson_gcs_file = gcs.upload_file(ndjson_file, gcs_path)
   ndjson_file.close()
 
@@ -78,16 +80,11 @@ def main(argv):
     with Pool(len(FILE_TYPES)) as pool:
       edsm_files = pool.starmap(fetch_edsm_file, URLS.items())
       gcs_files.append(edsm_files)
-      print(type(edsm_files))
-      print(edsm_files)
-      edsm_file_mapping = zip(FILE_TYPES, edsm_files)
-      print(edsm_file_mapping)
-    #   bq_tables = ['%s.edsm.%s' % (FLAGS.project_id, file) for file in FILE_TYPES]
-    #   gcs_table_mapping = zip(gcs_files, bq_tables)
-      #pubsub_responses = [process_edsm_file(x[0], x[1]) for x in gcs_table_mapping]
   else:
-    edsm_file_blob = fetch_edsm_file(FLAGS.file_type, URLS[FLAGS.file_type])
-    gcs_files.append(edsm_file_blob)
+    #edsm_file_blob = fetch_edsm_file(FLAGS.file_type, URLS[FLAGS.file_type])
+    edsm_file_blob = gcs.get_blob('%s/%s.gz' % (DATASET, FLAGS.file_type))
+    #gcs_files.append(edsm_file_blob)
+    print(FLAGS.file_type)
     ndjson_file_blob = generate_ndjson(FLAGS.file_type, edsm_file_blob)
     gcs_files.append(ndjson_file_blob)
 
@@ -96,12 +93,14 @@ def main(argv):
         DATASET,
         FLAGS.file_type
     )
-    logging.info(
-        'Successfully created table %s.%s.%s',
-        bigquery_table.project,
-        bigquery_table.dataset_id,
-        bigquery_table.table_id,
-    )
+    print(type(bigquery_table))
+    print(dir(bigquery_table))
+    # logging.info(
+    #     'Successfully created table %s.%s.%s',
+    #     bigquery_table.project,
+    #     bigquery_table.dataset_id,
+    #     bigquery_table.table_id,
+    # )
 
   if FLAGS.cleanup_files:
     for file in gcs_files:

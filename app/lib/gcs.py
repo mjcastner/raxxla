@@ -13,6 +13,10 @@ FLAGS = flags.FLAGS
 flags.DEFINE_string('gcs_bucket', None, 'Google Cloud Storage bucket ID.')
 flags.mark_flag_as_required('gcs_bucket')
 
+def get_blob(destination_path: str):
+  gcs_bucket = GCS_CLIENT.bucket(FLAGS.gcs_bucket)
+  return gcs_bucket.get_blob(destination_path)
+
 
 def get_gcs_uri(destination_path: str):
   gcs_uri = 'gs://%s/%s' % (FLAGS.gcs_bucket, destination_path)
