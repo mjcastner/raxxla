@@ -1,4 +1,4 @@
-FROM python:3
+FROM python:3.7
 
 ADD ./app /raxxla
 ADD ./requirements.txt /raxxla/requirements.txt
