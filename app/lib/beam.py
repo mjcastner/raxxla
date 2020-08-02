@@ -24,6 +24,7 @@ class Transform:
         region=FLAGS.gcp_region,
         runner=FLAGS.beam_runner,
         save_main_session=False,
+        setup_file='/raxxla/setup.py',
         staging_location=gcs.get_gcs_uri('beam/staging'),
         temp_location=gcs.get_gcs_uri('beam/temp'),
     )

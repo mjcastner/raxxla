@@ -45,34 +45,8 @@ def fetch_edsm_file(file_type: str, url: str):
   return gcs_blob
 
 
-def generate_ndjson(file_type: str, gcs_blob):
-  gcs_path = '%s/%s.ndjson' % (DATASET, file_type)
-  gcs_uri = gcs.get_gcs_uri(gcs_path)
-  logging.info('Generating NDJSON file at %s...', gcs_uri)
-  gcs_file = io.BytesIO(gcs_blob.download_as_string())
-  ndjson_file = tempfile.TemporaryFile()
-  with gzip.GzipFile(fileobj=gcs_file, mode='rb') as file:
-    for line in file:
-      try:
-        json_re_match = re.search(r'(\{.*\})', line.decode())
-        if json_re_match:
-          json_string = json_re_match.group(1)
-          edsm_object = utils.edsmObject(file_type, json_string)
-          formatted_json_string = edsm_object.format_json()
-          ndjson_file.write(formatted_json_string.encode())
-          ndjson_file.write(b'\n')
-      except ValueError:
-        logging.error('Failed to process JSON string: %s', line)
-      except AttributeError:
-        logging.error('Failed to process JSON string: %s', line)
-
-  ndjson_file.seek(0)
-  ndjson_gcs_file = gcs.upload_file(ndjson_file, gcs_path)
-  ndjson_file.close()
-
-  return ndjson_gcs_file
-
 def transform_edsm_file(input_item, map_args=None):
+  from lib import utils
   file_type = map_args
   try:
     json_re_match = re.search(r'(\{.*\})', input_item)
@@ -85,6 +59,7 @@ def transform_edsm_file(input_item, map_args=None):
     return
   except AttributeError:
     return
+
 
 def main(argv):
   del argv
