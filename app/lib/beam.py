@@ -23,11 +23,33 @@ class Transform:
         project=FLAGS.project_id,
         region=FLAGS.gcp_region,
         runner=FLAGS.beam_runner,
-        save_main_session=True,
+        save_main_session=False,
         staging_location=gcs.get_gcs_uri('beam/staging'),
         temp_location=gcs.get_gcs_uri('beam/temp'),
     )
 
-  def generate_ndjson_file(self, input_json: str, output_json: str):
+  def _remove_null(self, element):
+    if element is not None:
+      yield element
+    else:
+      return
+
+  def map(
+      self,
+      input_file_path: str,
+      output_file_path: str,
+      map_function,
+      map_args):
+    input_file_uri = gcs.get_gcs_uri(input_file_path)
+    output_file_uri = gcs.get_gcs_uri(output_file_path)
     with apache_beam.Pipeline(options=self.options) as p:
-      json_lines = p | beam.io.ReadFromText(input_json)
+      raw_input = p | apache_beam.io.ReadFromText(input_file_uri)
+      formatted_output = (
+          raw_input | 
+          apache_beam.Map(map_function, map_args=map_args) | 
+          apache_beam.ParDo(self._remove_null)
+      )
+      ndjson_file = formatted_output | apache_beam.io.WriteToText(output_file_uri)
+
+    shard_file_path = '%s-00000-of-00001' % output_file_path
+    return gcs.get_blob(shard_file_path)

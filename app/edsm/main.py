@@ -72,6 +72,19 @@ def generate_ndjson(file_type: str, gcs_blob):
 
   return ndjson_gcs_file
 
+def transform_edsm_file(input_item, map_args=None):
+  file_type = map_args
+  try:
+    json_re_match = re.search(r'(\{.*\})', input_item)
+    if json_re_match:
+      json_string = json_re_match.group(1)
+      edsm_object = utils.edsmObject(file_type, json_string)
+      formatted_json_string = edsm_object.format_json()
+      return formatted_json_string
+  except ValueError:
+    return
+  except AttributeError:
+    return
 
 def main(argv):
   del argv
@@ -85,37 +98,35 @@ def main(argv):
       edsm_file_blobs = pool.starmap(fetch_edsm_file, URLS.items())
       gcs_files.append(edsm_file_blobs)
   else:
-    #edsm_file_blob = gcs.get_blob('%s/%s.gz' % (DATASET, FLAGS.file_type))
-    edsm_file_blob = fetch_edsm_file(FLAGS.file_type, URLS[FLAGS.file_type])
-    edsm_file_path = gcs.get_gcs_uri(edsm_file_blob.name)
-    ndjson_file_path = gcs.get_gcs_uri(
-        '%s/%s.ndjson' % (DATASET, FLAGS.file_type))
-    print(edsm_file_path)
-    print(ndjson_file_path)
-    beam_pipeline = beam.Transform('edsm_json_transform_job')
-    beam_pipeline.generate_ndjson_file(edsm_file_path, ndjson_file_path)
+    edsm_file_blob = gcs.get_blob('%s/%s.gz' % (DATASET, FLAGS.file_type))
+    #edsm_file_blob = fetch_edsm_file(FLAGS.file_type, URLS[FLAGS.file_type])
+    ndjson_file_path = '%s/%s.ndjson' % (DATASET, FLAGS.file_type)
+
+    beam_pipeline = beam.Transform('edsm-%s-transform-job' % FLAGS.file_type)
+    ndjson_file_blob = beam_pipeline.map(
+        edsm_file_blob.name,
+        ndjson_file_path,
+        transform_edsm_file,
+        FLAGS.file_type)
     #gcs_files.append(edsm_file_blob)
-    #ndjson_file_blob = generate_ndjson(FLAGS.file_type, edsm_file_blob)
-    #gcs_files.append(ndjson_file_blob)
+    gcs_files.append(ndjson_file_blob)
 
-    # bigquery_table = bigquery.load_table_from_ndjson(
-    #     gcs.get_gcs_uri(ndjson_file_blob.name),
-    #     DATASET,
-    #     FLAGS.file_type
-    # )
-    # print(type(bigquery_table))
-    # print(dir(bigquery_table))
-    # logging.info(
-    #     'Successfully created table %s.%s.%s',
-    #     bigquery_table.project,
-    #     bigquery_table.dataset_id,
-    #     bigquery_table.table_id,
-    # )
+    bigquery_table = bigquery.load_table_from_ndjson(
+        gcs.get_gcs_uri(ndjson_file_blob.name),
+        DATASET,
+        FLAGS.file_type
+    )
+    logging.info(
+        'Successfully created table %s.%s.%s',
+        bigquery_table.project,
+        bigquery_table.dataset_id,
+        bigquery_table.table_id,
+    )
 
-  # if FLAGS.cleanup_files:
-  #   for file in gcs_files:
-  #     logging.info('Cleaning up file %s...', gcs.get_gcs_uri(file.name))
-  #     file.delete()
+  if FLAGS.cleanup_files:
+    for file in gcs_files:
+      logging.info('Cleaning up file %s...', gcs.get_gcs_uri(file.name))
+      file.delete()
 
   logging.info('Pipeline completed in %s seconds.', int(time.time()-debug_start))
 

@@ -23,6 +23,7 @@ def load_table_from_ndjson(gcs_uri: str, dataset: str, file_type: str):
   JOB_CONFIG.source_format = bigquery.SourceFormat.NEWLINE_DELIMITED_JSON
   dataset_ref = safe_get_dataset(dataset)
   table_ref = dataset_ref.table(file_type)
+  table_path = '%s.%s.%s' % (BQ_CLIENT.project, dataset, file_type)
 
   try:
     load_job = BQ_CLIENT.load_table_from_uri(
@@ -35,16 +36,9 @@ def load_table_from_ndjson(gcs_uri: str, dataset: str, file_type: str):
 
     load_job.result()
     logging.info('Table load completed!')
+    return BQ_CLIENT.get_table(table_ref)
   except google.api_core.exceptions.BadRequest as e:
-    logging.error(
-        'Unable to create BigQuery table %s.%s.%s: %s',
-        BQ_CLIENT.project,
-        dataset,
-        file_type,
-        e
-    )
-
-  return load_job
+    logging.error('Unable to create BigQuery table %s: %s', table_path, e)
 
 
 def safe_get_dataset(dataset_name: str):
