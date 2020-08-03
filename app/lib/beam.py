@@ -16,12 +16,16 @@ flags.mark_flag_as_required('project_id')
 flags.mark_flag_as_required('beam_runner')
 
 
+class RemoveNull(apache_beam.DoFn):
+  def process(self, line):
+    if line is not None:
+      yield line
+
+
 class Transform:
   def __init__(self, job_name: str):
     self.options = apache_beam.options.pipeline_options.PipelineOptions(
-        autoscaling_algorithm='NONE',
         job_name=job_name,
-        num_workers=3,
         project=FLAGS.project_id,
         region=FLAGS.gcp_region,
         runner=FLAGS.beam_runner,
@@ -30,12 +34,6 @@ class Transform:
         staging_location=gcs.get_gcs_uri('beam/staging'),
         temp_location=gcs.get_gcs_uri('beam/temp'),
     )
-
-  def _remove_null(self, element):
-    if element is not None:
-      yield element
-    else:
-      return
 
   def map(
       self,
@@ -46,13 +44,21 @@ class Transform:
     input_file_uri = gcs.get_gcs_uri(input_file_path)
     output_file_uri = gcs.get_gcs_uri(output_file_path)
     with apache_beam.Pipeline(options=self.options) as p:
-      raw_input = p | apache_beam.io.ReadFromText(input_file_uri)
-      formatted_output = (
-          raw_input | 
-          apache_beam.Map(map_function, map_args=map_args) | 
-          apache_beam.ParDo(self._remove_null)
+      test = (
+          p | 
+          apache_beam.io.ReadFromText(input_file_uri) |
+          apache_beam.Map(map_function, map_args=map_args) |
+          apache_beam.ParDo(RemoveNull()) #|
+          #apache_beam.Map(print)
       )
-      ndjson_file = formatted_output | apache_beam.io.WriteToText(output_file_uri)
+      # raw_input = p | apache_beam.io.ReadFromText(input_file_uri)
+      # #debug_print = raw_input | apache_beam.Map(print)
+      # formatted_output = (
+      #     raw_input | 
+      #     apache_beam.Map(map_function, map_args=map_args) #| 
+      #     #apache_beam.ParDo(self._remove_null)
+      # )
+      # ndjson_file = formatted_output | apache_beam.io.WriteToText(output_file_uri)
 
     shard_file_path = '%s-00000-of-00001' % output_file_path
     return gcs.get_blob(shard_file_path)

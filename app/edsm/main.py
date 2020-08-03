@@ -84,19 +84,19 @@ def main(argv):
         transform_edsm_file,
         FLAGS.file_type)
     #gcs_files.append(edsm_file_blob)
-    gcs_files.append(ndjson_file_blob)
+    #gcs_files.append(ndjson_file_blob)
 
-    bigquery_table = bigquery.load_table_from_ndjson(
-        gcs.get_gcs_uri(ndjson_file_blob.name),
-        DATASET,
-        FLAGS.file_type
-    )
-    logging.info(
-        'Successfully created table %s.%s.%s',
-        bigquery_table.project,
-        bigquery_table.dataset_id,
-        bigquery_table.table_id,
-    )
+    # bigquery_table = bigquery.load_table_from_ndjson(
+    #     gcs.get_gcs_uri(ndjson_file_blob.name),
+    #     DATASET,
+    #     FLAGS.file_type
+    # )
+    # logging.info(
+    #     'Successfully created table %s.%s.%s',
+    #     bigquery_table.project,
+    #     bigquery_table.dataset_id,
+    #     bigquery_table.table_id,
+    # )
 
   if FLAGS.cleanup_files:
     for file in gcs_files:

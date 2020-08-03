@@ -3,14 +3,7 @@
 
 import setuptools
 
-REQUIRED_PACKAGES = [
-  'absl-py==0.9.0',
-  'apache-beam[gcp]==2.23.0',
-  'google-cloud-bigquery==1.26.0',
-  'google-cloud-pubsub==1.7.0',
-  'google-cloud-storage==1.29.0',
-  'pandas==1.0.5',
-]
+REQUIRED_PACKAGES = ['absl-py==0.9.0']
 
 setuptools.setup(
     name='Raxxla',
