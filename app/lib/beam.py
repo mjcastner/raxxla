@@ -19,7 +19,7 @@ flags.mark_flag_as_required('beam_runner')
 class Transform:
   def __init__(self, job_name: str):
     self.options = apache_beam.options.pipeline_options.PipelineOptions(
-        autoscaling_algorithm=None,
+        autoscaling_algorithm='NONE',
         job_name=job_name,
         num_workers=3,
         project=FLAGS.project_id,
