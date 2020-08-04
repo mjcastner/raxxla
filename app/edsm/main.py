@@ -45,22 +45,6 @@ def fetch_edsm_file(file_type: str, url: str):
   return gcs_blob
 
 
-def transform_edsm_file(input_item, map_args=None):
-  from lib import utils
-  file_type = map_args
-  try:
-    json_re_match = re.search(r'(\{.*\})', input_item)
-    if json_re_match:
-      json_string = json_re_match.group(1)
-      edsm_object = utils.edsmObject(file_type, json_string)
-      formatted_json_string = edsm_object.format_json()
-      return formatted_json_string
-  except ValueError:
-    return
-  except AttributeError:
-    return
-
-
 def main(argv):
   del argv
 
@@ -81,22 +65,21 @@ def main(argv):
     ndjson_file_blob = beam_pipeline.map(
         edsm_file_blob.name,
         ndjson_file_path,
-        transform_edsm_file,
         FLAGS.file_type)
     #gcs_files.append(edsm_file_blob)
-    #gcs_files.append(ndjson_file_blob)
+    gcs_files.append(ndjson_file_blob)
 
-    # bigquery_table = bigquery.load_table_from_ndjson(
-    #     gcs.get_gcs_uri(ndjson_file_blob.name),
-    #     DATASET,
-    #     FLAGS.file_type
-    # )
-    # logging.info(
-    #     'Successfully created table %s.%s.%s',
-    #     bigquery_table.project,
-    #     bigquery_table.dataset_id,
-    #     bigquery_table.table_id,
-    # )
+    bigquery_table = bigquery.load_table_from_ndjson(
+        gcs.get_gcs_uri(ndjson_file_blob.name),
+        DATASET,
+        FLAGS.file_type
+    )
+    logging.info(
+        'Successfully created table %s.%s.%s',
+        bigquery_table.project,
+        bigquery_table.dataset_id,
+        bigquery_table.table_id,
+    )
 
   if FLAGS.cleanup_files:
     for file in gcs_files:

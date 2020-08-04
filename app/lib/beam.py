@@ -1,6 +1,6 @@
 import apache_beam
 
-from lib import gcs
+from lib import gcs, utils
 
 from absl import flags, logging
 
@@ -14,12 +14,6 @@ flags.DEFINE_string('gcp_region', 'us-west1', 'Google Cloud region to run in.')
 flags.DEFINE_string('project_id', None, 'Google Cloud project ID.')
 flags.mark_flag_as_required('project_id')
 flags.mark_flag_as_required('beam_runner')
-
-
-class RemoveNull(apache_beam.DoFn):
-  def process(self, line):
-    if line is not None:
-      yield line
 
 
 class Transform:
@@ -39,26 +33,17 @@ class Transform:
       self,
       input_file_path: str,
       output_file_path: str,
-      map_function,
-      map_args):
+      file_type: str):
     input_file_uri = gcs.get_gcs_uri(input_file_path)
     output_file_uri = gcs.get_gcs_uri(output_file_path)
     with apache_beam.Pipeline(options=self.options) as p:
-      test = (
-          p | 
-          apache_beam.io.ReadFromText(input_file_uri) |
-          apache_beam.Map(map_function, map_args=map_args) |
-          apache_beam.ParDo(RemoveNull()) #|
-          #apache_beam.Map(print)
+      pipeline = (
+          p 
+          | 'Read input file' >> apache_beam.io.ReadFromText(input_file_uri)
+          | 'Extract JSON' >> apache_beam.ParDo(utils.ExtractJson())
+          | 'Format JSON' >> apache_beam.ParDo(utils.FormatEdsmJson(file_type))
+          | 'Write output file' >> apache_beam.io.WriteToText(output_file_uri)
       )
-      # raw_input = p | apache_beam.io.ReadFromText(input_file_uri)
-      # #debug_print = raw_input | apache_beam.Map(print)
-      # formatted_output = (
-      #     raw_input | 
-      #     apache_beam.Map(map_function, map_args=map_args) #| 
-      #     #apache_beam.ParDo(self._remove_null)
-      # )
-      # ndjson_file = formatted_output | apache_beam.io.WriteToText(output_file_uri)
 
     shard_file_path = '%s-00000-of-00001' % output_file_path
     return gcs.get_blob(shard_file_path)

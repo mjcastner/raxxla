@@ -1,13 +1,16 @@
 import json
+import re
+
 from pprint import pprint
 
 from absl import logging
 
+import apache_beam
 
-class edsmObject:
-  def __init__(self, file_type: str, json_string: str):
+
+class FormatEdsmJson(apache_beam.DoFn):
+  def __init__(self, file_type: str):
     self.file_type = file_type
-    self.json_string = json_string
 
   @staticmethod
   def __format_faction_states(input_object):
@@ -122,7 +125,8 @@ class edsmObject:
 
     return json.dumps(output_object)
 
-  def format_json(self):
+  def process(self, json_string):
+    self.json_string = json_string
     if self.file_type == 'population':
       formatted_json = self._format_population()
     elif self.file_type == 'powerplay':
@@ -133,4 +137,16 @@ class edsmObject:
       logging.error('Unsupported input file type.')
       formatted_json = None
 
-    return formatted_json
+    yield formatted_json
+
+class ExtractJson(apache_beam.DoFn):
+  def process(self, line):
+    try:
+      json_re_match = re.search(r'(\{.*\})', line)
+      if json_re_match:
+        json_string = json_re_match.group(1)
+        yield json_string
+    except ValueError:
+      return
+    except AttributeError:
+      return
