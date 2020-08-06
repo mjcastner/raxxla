@@ -51,13 +51,12 @@ def generate_ndjson_file(file_type: str, gcs_blob):
   ndjson_file = tempfile.TemporaryFile()
 
   with multiprocessing.Pool(CORE_COUNT) as pool:
-    json_batch = []
+    line_batch = []
     for line in decompressed_file:
-      if len(json_batch) < CORE_COUNT:
-        json_re_match = re.search(r'(\{.*\})', line)
-        if json_re_match:
-          json_batch.append(json_re_match.group(1))
+      if len(line_batch) < CORE_COUNT:
+        line_batch.append(line)
       else:
+        json_batch = pool.map(utils.extract_json, line_batch)
         formatted_json = pool.starmap(
             utils.format_edsm_json,
             [(x, file_type) for x in json_batch]
