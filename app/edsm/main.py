@@ -13,6 +13,7 @@ from lib import utils
 from absl import app, flags, logging
 
 # Global vars
+CORE_COUNT = multiprocessing.cpu_count()
 DATASET = 'edsm'
 URLS = {
     'bodies': 'https://www.edsm.net/dump/bodies7days.json.gz',
@@ -44,6 +45,35 @@ def fetch_edsm_file(file_type: str, url: str):
 
   return gcs_blob
 
+def generate_ndjson_file(file_type: str, gcs_blob):
+  gcs_file = io.BytesIO(gcs_blob.download_as_string())
+  decompressed_file = gzip.open(gcs_file, mode='rt')
+  ndjson_file = tempfile.TemporaryFile()
+
+  with multiprocessing.Pool(CORE_COUNT) as pool:
+    json_batch = []
+    for line in decompressed_file:
+      if len(json_batch) < CORE_COUNT:
+        json_re_match = re.search(r'(\{.*\})', line)
+        if json_re_match:
+          json_batch.append(json_re_match.group(1))
+      else:
+        formatted_json = pool.starmap(
+            utils.format_edsm_json,
+            [(x, file_type) for x in json_batch]
+        )
+        [ndjson_file.write(x.encode() + b'\n') for x in formatted_json]
+        json_batch.clear()
+
+  ndjson_file.seek(0)
+  gcs_path = '%s/%s.ndjson' % (DATASET, file_type)
+  gcs_uri = gcs.get_gcs_uri(gcs_path)
+  logging.info('Generating NDJSON file at %s...', gcs_uri)
+  ndjson_gcs_file = gcs.upload_file(ndjson_file, gcs_path)
+  ndjson_file.close()
+
+  return ndjson_gcs_file
+
 
 def main(argv):
   del argv
@@ -59,14 +89,8 @@ def main(argv):
   else:
     edsm_file_blob = gcs.get_blob('%s/%s.gz' % (DATASET, FLAGS.file_type))
     #edsm_file_blob = fetch_edsm_file(FLAGS.file_type, URLS[FLAGS.file_type])
-    ndjson_file_path = '%s/%s.ndjson' % (DATASET, FLAGS.file_type)
-
-    beam_pipeline = beam.Transform('edsm-%s-transform-job' % FLAGS.file_type)
-    ndjson_file_blob = beam_pipeline.map(
-        edsm_file_blob.name,
-        ndjson_file_path,
-        FLAGS.file_type)
-    #gcs_files.append(edsm_file_blob)
+    ndjson_file_blob = generate_ndjson_file(FLAGS.file_type, edsm_file_blob)
+    # gcs_files.append(edsm_file_blob)
     gcs_files.append(ndjson_file_blob)
 
     bigquery_table = bigquery.load_table_from_ndjson(
