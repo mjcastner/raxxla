@@ -63,6 +63,8 @@ def generate_ndjson_file(file_type: str, gcs_blob):
             [(x, file_type) for x in json_batch]
         )
         [ndjson_file.write(x.encode() + b'\n') for x in formatted_json]
+        line_batch.clear()
+        raw_json_batch.clear()
         json_batch.clear()
 
   ndjson_file.seek(0)
@@ -81,6 +83,7 @@ def main(argv):
   debug_start = time.time()
   gcs_files = []
 
+  logging.info('Initializing EDSM BigQuery ETL pipeline...')
   if FLAGS.file_type == 'all':
     logging.info('Processing all EDSM files...')
     with multiprocessing.Pool(len(FILE_TYPES)) as pool:
