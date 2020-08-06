@@ -57,7 +57,7 @@ def generate_ndjson_file(file_type: str, gcs_blob):
         line_batch.append(line)
       else:
         raw_json_batch = pool.map(utils.extract_json, line_batch)
-        json_batch = filter(None, raw_json_batch)
+        json_batch = list(filter(None, raw_json_batch))
         formatted_json = pool.starmap(
             utils.format_edsm_json,
             [(x, file_type) for x in json_batch]
