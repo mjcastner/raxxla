@@ -56,7 +56,8 @@ def generate_ndjson_file(file_type: str, gcs_blob):
       if len(line_batch) < CORE_COUNT:
         line_batch.append(line)
       else:
-        json_batch = pool.map(utils.extract_json, line_batch)
+        raw_json_batch = pool.map(utils.extract_json, line_batch)
+        json_batch = filter(None, raw_json_batch)
         formatted_json = pool.starmap(
             utils.format_edsm_json,
             [(x, file_type) for x in json_batch]
