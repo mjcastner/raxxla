@@ -51,6 +51,7 @@ def generate_ndjson_file(file_type: str, gcs_blob):
   decompressed_file = gzip.open(gcs_file, mode='rt')
   ndjson_file = tempfile.TemporaryFile()
 
+  # TODO(mjcastner): This needs an optimization pass
   with multiprocessing.Pool(CORE_COUNT) as pool:
     line_batch = []
     for line in decompressed_file:

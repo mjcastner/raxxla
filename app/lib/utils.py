@@ -64,6 +64,31 @@ def format_edsm_json(raw_json: str, file_type: str):
 
     return output_list
 
+  def format_parents(input_object: list):
+    output_list = []
+
+    if input_object:
+      for parent in input_object:
+        for key, value in parent.items():
+          output_list.append({
+              'type': key,
+              'relative_id': value,
+          })
+
+    return output_list
+
+  def format_percentage(input_object):
+    output_list = []
+
+    if input_object:
+      for key, value in input_object.items():
+        output_list.append({
+            'type': key,
+            'percentage': value,
+        })
+
+    return output_list
+
   def format_bodies(raw_json: str):
     input_object = json.loads(raw_json)
     output_object = {
@@ -89,11 +114,28 @@ def format_edsm_json(raw_json: str, file_type: str):
             'spectral_class': input_object.get('spectralClass'),
             'reserve_level': input_object.get('reserveLevel'),
         },
+        'atmosphere': {
+            'type': input_object.get('atmosphereType'),
+            'composition': format_percentage(input_object.get('atmosphereComposition')),
+        },
+        'belts': input_object.get('belts'),
+        'rings': input_object.get('rings'),
+        'composition': format_percentage(input_object.get('solidComposition')),
+        'materials': format_percentage(input_object.get('materials')),
+        'parents': format_parents(input_object.get('parents')),
+        'orbit': {
+            'period': input_object.get('orbitalPeriod'),
+            'rotational_period': input_object.get('rotationalPeriod'),
+            'tidally_locked': input_object.get('rotationalPeriodTidallyLocked'),
+            'periapsis': input_object.get('argOfPeriapsis'),
+            'eccentricity': input_object.get('orbitalEccentricity'),
+            'inclination': input_object.get('orbitalInclination'),
+            'semimajor_axis': input_object.get('semiMajorAxis'),
+            'axial_tilt': input_object.get('axialTilt'),
+        },
+        'updated': input_object.get('updateTime'),
     }
-    # pprint(input_object)
-    # print('======================================')
-    # pprint(output_object)
-    # print()
+
     return json.dumps(output_object)
 
   def format_population(raw_json):
