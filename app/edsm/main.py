@@ -10,8 +10,6 @@ from lib import gcs
 from lib import utils
 from pprint import pprint
 
-import ray
-
 from absl import app, flags, logging
 
 # Global vars
@@ -47,6 +45,7 @@ def fetch_edsm_file(file_type: str, url: str):
 
   return gcs_blob
 
+
 def generate_ndjson_file(file_type: str, gcs_blob):
   gcs_file = io.BytesIO(gcs_blob.download_as_string())
   decompressed_file = gzip.open(gcs_file, mode='rt')
@@ -79,21 +78,9 @@ def generate_ndjson_file(file_type: str, gcs_blob):
   return ndjson_gcs_file
 
 
-def ray_test(file_type: str, gcs_blob):
-  gcs_file = io.BytesIO(gcs_blob.download_as_string())
-  decompressed_file = gzip.open(gcs_file, mode='rt')
-
-  for line in decompressed_file:
-    raw_json = utils.extract_json.remote(line)
-    formatted_json = utils.format_edsm_json.remote(raw_json, file_type)
-    formatted_json_result = ray.get(formatted_json)
-    
-    print(formatted_json_result)
-
 def main(argv):
   del argv
 
-  ray.init()
   debug_start = time.time()
   gcs_files = []
 
@@ -108,8 +95,7 @@ def main(argv):
     #edsm_file_blob = fetch_edsm_file(FLAGS.file_type, URLS[FLAGS.file_type])
     # gcs_files.append(edsm_file_blob)
 
-    #ndjson_file_blob = generate_ndjson_file(FLAGS.file_type, edsm_file_blob)
-    ndjson_file_blob = ray_test(FLAGS.file_type, edsm_file_blob)
+    ndjson_file_blob = generate_ndjson_file(FLAGS.file_type, edsm_file_blob)
     gcs_files.append(ndjson_file_blob)
 
     bigquery_table = bigquery.load_table_from_ndjson(

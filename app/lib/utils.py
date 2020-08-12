@@ -3,11 +3,9 @@ import re
 
 from pprint import pprint
 
-import ray
-
 from absl import logging
 
-@ray.remote
+
 def format_edsm_json(raw_json: str, file_type: str):
   def format_faction_states(input_object):
     output_list = []
@@ -171,7 +169,6 @@ def format_edsm_json(raw_json: str, file_type: str):
   return formatted_json
 
 
-@ray.remote
 def extract_json(raw_input):
   try:
     json_re_match = re.search(r'(\{.*\})', raw_input)
