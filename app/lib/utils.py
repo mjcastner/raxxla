@@ -5,6 +5,9 @@ from pprint import pprint
 
 from absl import logging
 
+JSON_RE_PATTERN = re.compile(r'(\{.*\})')
+JSON_RE_SEARCH = JSON_RE_PATTERN.search
+
 
 def format_edsm_json(raw_json: str, file_type: str):
   def format_faction_states(input_object):
@@ -88,6 +91,21 @@ def format_edsm_json(raw_json: str, file_type: str):
         })
 
     return output_list
+  
+  def format_ringlike(input_object):
+    output_list = []
+
+    if input_object:
+      for ringlike in input_object:
+        output_list.append({
+          'name': ringlike.get('name'),
+          'type': ringlike.get('type'),
+          'mass': float(ringlike.get('mass', 0)),
+          'inner_radius': float(ringlike.get('innerRadius', 0)),
+          'outer_radius': float(ringlike.get('outerRadius', 0)),
+        })
+
+    return output_list
 
   def format_bodies(raw_json: str):
     input_object = json.loads(raw_json)
@@ -118,8 +136,8 @@ def format_edsm_json(raw_json: str, file_type: str):
             'type': input_object.get('atmosphereType'),
             'composition': format_percentage(input_object.get('atmosphereComposition')),
         },
-        'belts': input_object.get('belts'),
-        'rings': input_object.get('rings'),
+        'belts': format_ringlike(input_object.get('belts')),
+        'rings': format_ringlike(input_object.get('rings')),
         'composition': format_percentage(input_object.get('solidComposition')),
         'materials': format_percentage(input_object.get('materials')),
         'parents': format_parents(input_object.get('parents')),
@@ -173,6 +191,36 @@ def format_edsm_json(raw_json: str, file_type: str):
 
     return json.dumps(output_object)
 
+  def format_stations(raw_json):
+    input_object = json.loads(raw_json)
+    output_object = {
+        'id': input_object.get('id'),
+        'system_id': input_object.get('systemId64'),
+        'name': input_object.get('name'),
+        'type': input_object.get('type'),
+        'distance': input_object.get('distanceToArrival'),
+        'economy': {
+            'id': input_object.get('marketId'),
+            'type': input_object.get('economy'),
+            'sub_type': input_object.get('secondEconomy'),
+        },
+        'services': {
+            'market': input_object.get('haveMarket'),
+            'shipyard': input_object.get('haveShipyard'),
+            'outfitting': input_object.get('haveOutfitting'),
+            'other': input_object.get('otherServices'),
+        },
+        'allegiance': input_object.get('allegiance'),
+        'faction': {
+            'id': input_object.get('controllingFaction', {}).get('id'),
+            'name': input_object.get('controllingFaction', {}).get('name'),
+        },
+        'government': input_object.get('government'),
+        'updated': input_object.get('updateTime', {}).get('information'),
+    }
+
+    return json.dumps(output_object)
+
   def format_systems(raw_json):
     input_object = json.loads(raw_json)
     output_object = {
@@ -202,6 +250,8 @@ def format_edsm_json(raw_json: str, file_type: str):
     formatted_json = format_population(raw_json)
   elif file_type == 'powerplay':
     formatted_json = format_powerplay(raw_json)
+  elif file_type == 'stations':
+    formatted_json = format_stations(raw_json)
   elif file_type == 'systems':
     formatted_json = format_systems(raw_json)
   else:
@@ -212,12 +262,7 @@ def format_edsm_json(raw_json: str, file_type: str):
 
 
 def extract_json(raw_input):
-  try:
-    json_re_match = re.search(r'(\{.*\})', raw_input)
-    if json_re_match:
-      json_string = json_re_match.group(1)
-      return json_string
-  except ValueError:
-    pass
-  except AttributeError:
-    pass
+  json_re_match = JSON_RE_SEARCH(raw_input)
+  if json_re_match:
+    json_string = json_re_match.group(1)
+    return json_string

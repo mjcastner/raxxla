@@ -10,6 +10,7 @@ BQ_CLIENT = bigquery.Client()
 JOB_CONFIG = bigquery.LoadJobConfig()
 JOB_CONFIG.autodetect = True
 JOB_CONFIG.ignore_unknown_values = True
+JOB_CONFIG.write_disposition = 'WRITE_TRUNCATE'
 
 
 def load_table_from_ndjson(gcs_uri: str, dataset: str, file_type: str):
@@ -39,6 +40,7 @@ def load_table_from_ndjson(gcs_uri: str, dataset: str, file_type: str):
     return BQ_CLIENT.get_table(table_ref)
   except google.api_core.exceptions.BadRequest as e:
     logging.error('Unable to create BigQuery table %s: %s', table_path, e)
+    return
 
 
 def safe_get_dataset(dataset_name: str):

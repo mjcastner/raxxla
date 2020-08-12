@@ -104,12 +104,14 @@ def main(argv):
         DATASET,
         FLAGS.file_type
     )
-    logging.info(
-        'Successfully created table %s.%s.%s',
-        bigquery_table.project,
-        bigquery_table.dataset_id,
-        bigquery_table.table_id,
-    )
+
+    if bigquery_table:
+      logging.info(
+          'Successfully created table %s.%s.%s',
+          bigquery_table.project,
+          bigquery_table.dataset_id,
+          bigquery_table.table_id,
+      )
 
   if FLAGS.cleanup_files:
     for file in gcs_files:
