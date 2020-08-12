@@ -92,9 +92,9 @@ def main(argv):
       edsm_file_blobs = pool.starmap(fetch_edsm_file, URLS.items())
       gcs_files.append(edsm_file_blobs)
   else:
-    edsm_file_blob = gcs.get_blob('%s/%s.gz' % (DATASET, FLAGS.file_type))
-    #edsm_file_blob = fetch_edsm_file(FLAGS.file_type, URLS[FLAGS.file_type])
-    # gcs_files.append(edsm_file_blob)
+    #edsm_file_blob = gcs.get_blob('%s/%s.gz' % (DATASET, FLAGS.file_type))
+    edsm_file_blob = fetch_edsm_file(FLAGS.file_type, URLS[FLAGS.file_type])
+    gcs_files.append(edsm_file_blob)
 
     ndjson_file_blob = generate_ndjson_file(FLAGS.file_type, edsm_file_blob)
     gcs_files.append(ndjson_file_blob)

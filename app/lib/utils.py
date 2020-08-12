@@ -1,8 +1,6 @@
 import json
 import re
 
-from pprint import pprint
-
 from absl import logging
 
 JSON_RE_PATTERN = re.compile(r'(\{.*\})')
