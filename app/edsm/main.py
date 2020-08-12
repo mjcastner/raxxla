@@ -1,132 +1,124 @@
 import gzip
-import json
-import os
+import io
+import multiprocessing
 import re
-import sys
+import tempfile
+import time
 
-from multiprocessing import Pool
-from urllib import error as urllib_error
-from urllib import request
+from lib import bigquery
+from lib import gcs
+from lib import utils
+from pprint import pprint
 
 from absl import app, flags, logging
-from edsm import schema
-from lib import sqs
 
 # Global vars
-file_types_meta = schema.file_types.copy()
-file_types_meta.append('all')
+CORE_COUNT = multiprocessing.cpu_count()
+DATASET = 'edsm'
+URLS = {
+    'bodies': 'https://www.edsm.net/dump/bodies7days.json.gz',
+    'population': 'https://www.edsm.net/dump/systemsPopulated.json.gz',
+    'powerplay': 'https://www.edsm.net/dump/powerPlay.json.gz',
+    'stations': 'https://www.edsm.net/dump/stations.json.gz',
+    'systems': 'https://www.edsm.net/dump/systemsWithCoordinates.json.gz',
+}
+FILE_TYPES = list(URLS.keys())
+FILE_TYPES_META = FILE_TYPES.copy()
+FILE_TYPES_META.append('all')
 
 # Define flags
 FLAGS = flags.FLAGS
-flags.DEFINE_integer('batch_size',
-                     500,
-                     'Default job batch size for processing and loading',
-                     lower_bound=1)
-flags.DEFINE_string(
-    'download_dir',
-    '/tmp',
-    'Local directory in which to temporarily store EDSM files.')
-flags.DEFINE_enum('type', None, file_types_meta, 'Input file type.')
-flags.DEFINE_string('sqs_queue', None, 'SQS Queue name.')
-flags.mark_flag_as_required('type')
-flags.mark_flag_as_required('sqs_queue')
+flags.DEFINE_boolean('cleanup_files', False, 'Cleanup GCS files.')
+flags.DEFINE_enum(
+    'file_type',
+    None,
+    FILE_TYPES_META,
+    'EDSM file(s) to process.'
+)
 
 
-def fetch_edsm_file(filetype: str) -> tuple:
-  edsm_file_url = schema.urls.get(filetype)
-  gz_filepath = '%s/%s.gz' % (FLAGS.download_dir, filetype)
+def fetch_edsm_file(file_type: str, url: str):
+  gcs_path = '%s/%s.gz' % (DATASET, file_type)
+  gcs_uri = gcs.get_gcs_uri(gcs_path)
+  logging.info('Downloading %s as %s', url, gcs_uri)
+  gcs_blob = gcs.fetch_url(gcs_path, url)
 
-  try:
-    logging.info('Fetching %s...', edsm_file_url)
-    with request.urlopen(edsm_file_url) as response:
-      gz_data = response.read()
-
-      with open(gz_filepath, 'wb') as gz_file:
-        gz_file.write(gz_data)
-        logging.info('Saved to %s', gz_filepath)
-  except (urllib_error.URLError, urllib_error.HTTPError) as e:
-    logging.error('Error fetching %s file: %s', filetype, e)
-
-  return (filetype, gz_filepath)
+  return gcs_blob
 
 
-def process_edsm_file(filetype: str, gz_filepath: str) -> bool:
-  gz_file = open(gz_filepath, 'rb')
-  sqs_batch = []
-  sqs_batch_bytes = sys.getsizeof(json.dumps(sqs_batch))
+def generate_ndjson_file(file_type: str, gcs_blob):
+  gcs_file = io.BytesIO(gcs_blob.download_as_string())
+  decompressed_file = gzip.open(gcs_file, mode='rt')
+  ndjson_file = tempfile.TemporaryFile()
 
-  try:
-    with gzip.open(gz_file, mode='rt') as uncompressed_file:
-      for line in uncompressed_file:
-        if (
-            len(sqs_batch) < FLAGS.batch_size 
-            and sqs_batch_bytes < sqs.message_byte_limit
-        ):
-          json_object_match = re.search(r'(\{.*\})', line)
-          if json_object_match:
-            json_object = json_object_match.group(1)
-            edsm_object = schema.edsmObject(filetype)
-            parsed_json = edsm_object.format_json(json_object)
-            sqs_batch.append(json.loads(parsed_json))
-        else:
-          logging.info('[EDSM/%s] Sending batch of %s rows (%s bytes)...',
-                       filetype,
-                       len(sqs_batch),
-                       sqs_batch_bytes)
-          sqs_body = json.dumps(sqs_batch)
-          sqs_response = sqs.send_message(
-              queue_name=FLAGS.sqs_queue,
-              message_content=sqs_body,
-              message_attributes=edsm_object.attributes)
-          if sqs_response:
-            logging.info(
-                '[EDSM/%s] Batch successfully sent to "%s" SQS queue',
-                filetype,
-                FLAGS.sqs_queue)
-            sqs_batch.clear()
-        sqs_batch_bytes = sys.getsizeof(json.dumps(sqs_batch))
+  # TODO(mjcastner): This needs an optimization pass
+  with multiprocessing.Pool(CORE_COUNT) as pool:
+    line_batch = []
+    for line in decompressed_file:
+      if len(line_batch) < CORE_COUNT:
+        line_batch.append(line)
+      else:
+        raw_json_batch = pool.map(utils.extract_json, line_batch)
+        json_batch = list(filter(None, raw_json_batch))
+        formatted_json = pool.starmap(
+            utils.format_edsm_json,
+            [(x, file_type) for x in json_batch]
+        )
+        [ndjson_file.write(x.encode() + b'\n') for x in formatted_json]
+        line_batch.clear()
+        raw_json_batch.clear()
+        json_batch.clear()
 
-      sqs_body = json.dumps(sqs_batch)
-      sqs_response = sqs.send_message(
-          queue_name=FLAGS.sqs_queue,
-          message_content=sqs_body,
-          message_attributes=edsm_object.attributes)
-      if sqs_response:
-        logging.info(
-            '[EDSM/%s] batch of %s sent to "%s" SQS queue',
-            filetype,
-            len(sqs_batch),
-            FLAGS.sqs_queue)
-        sqs_batch.clear()
-      return True
-  except Exception as e:
-    logging.error(e)
-    return False
+  ndjson_file.seek(0)
+  gcs_path = '%s/%s.ndjson' % (DATASET, file_type)
+  gcs_uri = gcs.get_gcs_uri(gcs_path)
+  logging.info('Generating NDJSON file at %s...', gcs_uri)
+  ndjson_gcs_file = gcs.upload_file(ndjson_file, gcs_path)
+  ndjson_file.close()
+
+  return ndjson_gcs_file
 
 
 def main(argv):
   del argv
 
-  if FLAGS.type == 'all':
-    with Pool(5) as fetch_pool:
-      fetch_responses = fetch_pool.map(fetch_edsm_file, schema.file_types)
-      for fetch_response in fetch_responses:
-        filetype = fetch_response[0]
-        gz_filepath = fetch_response[1]
-        process_response = process_edsm_file(filetype, gz_filepath)
-        if process_response:
-          logging.info('Successfully processed %s file!', FLAGS.type)
-          os.remove(gz_filepath)
-          logging.info('Temporary file %s removed', gz_filepath)
-  else:
-    fetch_response = fetch_edsm_file(FLAGS.type)
-    gz_filepath = fetch_response[1]
-    process_response = process_edsm_file(FLAGS.type, gz_filepath)
-    if process_response:
-      logging.info('Successfully processed %s file!', FLAGS.type)
-      os.remove(gz_filepath)
-      logging.info('Temporary file %s removed', gz_filepath)
+  debug_start = time.time()
+  gcs_files = []
 
+  logging.info('Initializing EDSM BigQuery ETL pipeline...')
+  if FLAGS.file_type == 'all':
+    logging.info('Processing all EDSM files...')
+    with multiprocessing.Pool(len(FILE_TYPES)) as pool:
+      edsm_file_blobs = pool.starmap(fetch_edsm_file, URLS.items())
+      gcs_files.append(edsm_file_blobs)
+  else:
+    #edsm_file_blob = gcs.get_blob('%s/%s.gz' % (DATASET, FLAGS.file_type))
+    edsm_file_blob = fetch_edsm_file(FLAGS.file_type, URLS[FLAGS.file_type])
+    gcs_files.append(edsm_file_blob)
+
+    ndjson_file_blob = generate_ndjson_file(FLAGS.file_type, edsm_file_blob)
+    gcs_files.append(ndjson_file_blob)
+
+    bigquery_table = bigquery.load_table_from_ndjson(
+        gcs.get_gcs_uri(ndjson_file_blob.name),
+        DATASET,
+        FLAGS.file_type
+    )
+
+    if bigquery_table:
+      logging.info(
+          'Successfully created table %s.%s.%s',
+          bigquery_table.project,
+          bigquery_table.dataset_id,
+          bigquery_table.table_id,
+      )
+
+  if FLAGS.cleanup_files:
+    for file in gcs_files:
+      logging.info('Cleaning up file %s...', gcs.get_gcs_uri(file.name))
+      file.delete()
+
+  logging.info('Pipeline completed in %s seconds.', int(time.time()-debug_start))
 
 
 if __name__ == '__main__':
