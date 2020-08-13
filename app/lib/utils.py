@@ -89,18 +89,18 @@ def format_edsm_json(raw_json: str, file_type: str):
         })
 
     return output_list
-  
+
   def format_ringlike(input_object):
     output_list = []
 
     if input_object:
       for ringlike in input_object:
         output_list.append({
-          'name': ringlike.get('name'),
-          'type': ringlike.get('type'),
-          'mass': float(ringlike.get('mass', 0)),
-          'inner_radius': float(ringlike.get('innerRadius', 0)),
-          'outer_radius': float(ringlike.get('outerRadius', 0)),
+            'name': ringlike.get('name'),
+            'type': ringlike.get('type'),
+            'mass': float(ringlike.get('mass', 0)),
+            'inner_radius': float(ringlike.get('innerRadius', 0)),
+            'outer_radius': float(ringlike.get('outerRadius', 0)),
         })
 
     return output_list
