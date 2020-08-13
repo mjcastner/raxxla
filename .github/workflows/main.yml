@@ -1,4 +1,4 @@
-name: Build and deploy to AWS ECR
+name: Build and deploy to GCR
 on:
   push:
     branches:
@@ -10,16 +10,10 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v2
-      - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v1
+      - name: Setup GCloud
+        uses: GoogleCloudPlatform/github-actions/setup-gcloud@master
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-west-2
-      - name: Build application image
-        run: docker build -t raxxla:latest .
-      - name: Push image to ECR
-        run: |
-          aws ecr get-login-password --region us-west-2 | docker login --username AWS --password-stdin 209604952396.dkr.ecr.us-west-2.amazonaws.com
-          docker tag raxxla:latest 209604952396.dkr.ecr.us-west-2.amazonaws.com/raxxla:latest
-          docker push 209604952396.dkr.ecr.us-west-2.amazonaws.com/raxxla:latest
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
+          service_account_key: ${{ secrets.GCP_SA_KEY }}
+          export_default_credentials: true
+      - run: gcloud info
