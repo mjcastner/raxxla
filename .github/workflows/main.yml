@@ -4,6 +4,10 @@ on:
     branches:
       - master
 
+env:
+  PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  SERVICE_NAME: raxxla
+
 jobs:
   build_and_deploy:
     runs-on: ubuntu-latest
@@ -20,4 +24,4 @@ jobs:
         run: |-
             gcloud builds submit \
               --quiet \
-              --tag "gcr.io/${{ secrets.RUN_PROJECT }}/raxxla:$GITHUB_SHA"
+              --tag "gcr.io/$PROJECT_ID/$SERVICE_NAME:$GITHUB_SHA"
