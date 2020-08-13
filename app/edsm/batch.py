@@ -1,26 +1,28 @@
 import gzip
 import io
 import multiprocessing
-import re
 import tempfile
 import time
 
 from lib import bigquery
 from lib import gcs
 from lib import utils
-from pprint import pprint
 
 from absl import app, flags, logging
 
 # Global vars
 CORE_COUNT = multiprocessing.cpu_count()
 DATASET = 'edsm'
+# URLS = {
+#     'bodies': 'https://www.edsm.net/dump/bodies7days.json.gz',
+#     'population': 'https://www.edsm.net/dump/systemsPopulated.json.gz',
+#     'powerplay': 'https://www.edsm.net/dump/powerPlay.json.gz',
+#     'stations': 'https://www.edsm.net/dump/stations.json.gz',
+#     'systems': 'https://www.edsm.net/dump/systemsWithCoordinates.json.gz',
+# }
 URLS = {
-    'bodies': 'https://www.edsm.net/dump/bodies7days.json.gz',
-    'population': 'https://www.edsm.net/dump/systemsPopulated.json.gz',
     'powerplay': 'https://www.edsm.net/dump/powerPlay.json.gz',
     'stations': 'https://www.edsm.net/dump/stations.json.gz',
-    'systems': 'https://www.edsm.net/dump/systemsWithCoordinates.json.gz',
 }
 FILE_TYPES = list(URLS.keys())
 FILE_TYPES_META = FILE_TYPES.copy()
@@ -90,7 +92,11 @@ def main(argv):
     logging.info('Processing all EDSM files...')
     with multiprocessing.Pool(len(FILE_TYPES)) as pool:
       edsm_file_blobs = pool.starmap(fetch_edsm_file, URLS.items())
-      gcs_files.append(edsm_file_blobs)
+
+      # for file_type, edsm_file_blob in zip(FILE_TYPES, edsm_file_blobs):
+      #   print(file_type)
+      #   print(edsm_file_blob)
+      #   print(dir(edsm_file_blob))
   else:
     #edsm_file_blob = gcs.get_blob('%s/%s.gz' % (DATASET, FLAGS.file_type))
     edsm_file_blob = fetch_edsm_file(FLAGS.file_type, URLS[FLAGS.file_type])
