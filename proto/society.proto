@@ -1,0 +1,30 @@
+syntax = "proto3";
+
+message State {
+  string type = 1;
+  string name = 2;
+}
+
+message Faction {
+  int32 id = 1;
+  string name = 2;
+  string allegiance = 3;
+  bool controlling = 4;
+  string government = 5;
+  float influence = 6;
+  string happiness = 7;
+  bool player_faction = 8;
+  repeated State states = 9;
+}
+
+message Population {
+  int32 planet_id = 1;
+  string allegiance = 2;
+  string government = 3;
+  string state = 4;
+  string economy = 5;
+  string security = 6;
+  int32 population = 7;
+  repeated Faction factions = 8;
+  int32 updated = 9;
+}
