@@ -12,8 +12,11 @@ from absl import logging
 # Global vars
 DATASET = 'edsm'
 URLS = {
+    'bodies': 'https://www.edsm.net/dump/bodies7days.json.gz',
+    'population': 'https://www.edsm.net/dump/systemsPopulated.json.gz',
     'powerplay': 'https://www.edsm.net/dump/powerPlay.json.gz',
     'stations': 'https://www.edsm.net/dump/stations.json.gz',
+    'systems': 'https://www.edsm.net/dump/systemsWithCoordinates.json.gz',
 }
 FILE_TYPES = list(URLS.keys())
 FILE_TYPES_META = FILE_TYPES.copy()
@@ -48,7 +51,8 @@ def pubsub_loader(file_type: str, gcs_blob):
   for line in decompressed_file:
     json_data = utils.extract_json(line)
     if json_data:
-      print(json_data)
+      edsm_proto = utils.edsm_json_to_proto(file_type, json_data)
+      print(edsm_proto)
 
   return errors
 
@@ -63,7 +67,8 @@ def main(argv):
     gcs_files.extend(edsm_file_blobs)
   else:
     logging.info('Fetching %s from EDSM...', FLAGS.file_type)
-    edsm_file_blob = gcs_fetch(FLAGS.file_type, URLS[FLAGS.file_type])
+    edsm_file_blob = gcs.get_blob('%s/%s.gz' % (DATASET, FLAGS.file_type))
+    # edsm_file_blob = gcs_fetch(FLAGS.file_type, URLS[FLAGS.file_type])
     gcs_files.append(edsm_file_blob)
 
     pubsub_errors = pubsub_loader(FLAGS.file_type, edsm_file_blob)
