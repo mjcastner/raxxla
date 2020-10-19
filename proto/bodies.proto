@@ -16,6 +16,11 @@ message Orbit {
   float axial_tilt = 8;    
 }
 
+message Parent {
+  string type = 1;
+  int32 relative_id = 2;
+}
+
 message Ringlike {
   string name = 1;
   string type = 2;
@@ -32,15 +37,15 @@ message Planet {
     float gravity = 4;
     bool landable = 5;
     float radius = 6;
-    int32 temperature = 7;
+    int64 temperature = 7;
     float pressure = 8;
     string volcanism = 9;
     string terraforming = 10;
   }
 
-  int32 id = 1;
-  int32 system_id = 2;
-  int32 relative_id = 3;
+  int64 id = 1;
+  int64 system_id = 2;
+  int64 relative_id = 3;
   string name = 4;
   PlanetMetadata metadata = 5;
   repeated Composition atmosphere = 6;
@@ -48,9 +53,9 @@ message Planet {
   repeated Composition materials = 8;
   repeated Ringlike rings = 9;
   repeated Ringlike belts = 10;
-  repeated int32 parents = 11;
+  repeated int64 parents = 11;
   Orbit orbit = 12;
-  int32 updated = 13;
+  int64 updated = 13;
 }
 
 message Star {
@@ -62,17 +67,17 @@ message Star {
     float solar_masses = 5;
     float solar_radius = 6;
     string luminosity = 7;
-    int32 temperature = 8;
+    int64 temperature = 8;
   }
 
-  int32 id = 1;
-  int32 system_id = 2;
+  int64 id = 1;
+  int64 system_id = 2;
   int32 relative_id = 3;
   string name = 4;
   StarMetadata metadata = 5;
   repeated Ringlike rings = 6;
   repeated Ringlike belts = 7;
-  repeated int32 parents = 8;
+  repeated Parent parents = 8;
   Orbit orbit = 9;
-  int32 updated = 10;
+  int64 updated = 10;
 }
