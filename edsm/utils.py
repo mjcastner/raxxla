@@ -18,6 +18,41 @@ JSON_RE_SEARCH = JSON_RE_PATTERN.search
 def edsm_json_to_proto(file_type: str, edsm_json: str):
   edsm_dict = json.loads(edsm_json)
 
+  def _format_composition(input_composition: dict):
+    output_composition = []
+    for element, percentage in input_composition.items():
+      composition = bodies_pb2.Composition()
+      composition.type = element
+      composition.percentage = percentage
+      output_composition.append(composition)
+    
+    return output_composition
+
+  def _format_parents(input_parents: list):
+    output_parents = []
+    for input_parent in input_parents:
+      for parent_type, parent_relative_id in input_parent.items():
+        if parent_type and parent_relative_id:
+          parent = bodies_pb2.Parent()
+          parent.type = parent_type
+          parent.relative_id = parent_relative_id
+          output_parents.append(parent)
+
+    return output_parents
+
+  def _format_ringlike(input_rings: list):
+    output_rings = []
+    for input_ring in input_rings:
+      ring = bodies_pb2.Ringlike()
+      ring.name = input_ring.get('name')
+      ring.type = input_ring.get('type')
+      ring.mass = input_ring.get('mass')
+      ring.inner_radius = input_ring.get('innerRadius')
+      ring.outer_radius = input_ring.get('outerRadius')
+      output_rings.append(ring)
+
+    return output_rings
+
   if file_type == 'bodies':
     if edsm_dict.get('type') == 'Star':
       star = bodies_pb2.Star()
@@ -32,10 +67,11 @@ def edsm_json_to_proto(file_type: str, edsm_json: str):
       star.orbit.period = edsm_dict.get('rotationalPeriod')
       star.orbit.tidally_locked = edsm_dict.get(
           'rotationalPeriodTidallyLocked')
-      star.updated = int(datetime.strptime(
+      updated_seconds = int(datetime.strptime(
         edsm_dict.get('updateTime'), 
         '%Y-%m-%d %H:%M:%S').timestamp()
       )
+      star.updated.FromSeconds(updated_seconds)
 
       # Optional fields
       if edsm_dict.get('axialTilt'):
@@ -58,42 +94,82 @@ def edsm_json_to_proto(file_type: str, edsm_json: str):
         star.metadata.spectral_class = edsm_dict.get('spectralClass')
       if edsm_dict.get('reserveLevel'):
         star.metadata.reserve_level = edsm_dict.get('reserveLevel')
-
-      rings = edsm_dict.get('rings')
-      if rings:
-        for ring_dict in rings:
-          ring = star.rings.add()
-          ring.name = ring_dict.get('name')
-          ring.type = ring_dict.get('type')
-          ring.mass = ring_dict.get('mass')
-          ring.inner_radius = ring_dict.get('innerRadius')
-          ring.outer_radius = ring_dict.get('outerRadius')
-        
-      belts = edsm_dict.get('belts')
-      if belts:
-        for belt_dict in belts:
-          belt = star.belts.add()
-          belt.name = belt_dict.get('name')
-          belt.type = belt_dict.get('type')
-          belt.mass = belt_dict.get('mass')
-          belt.inner_radius = belt_dict.get('innerRadius')
-          belt.outer_radius = belt_dict.get('outerRadius')
-          
-      parents = edsm_dict.get('parents')
-      if parents:
-        for parent_dict in parents:
-          for parent_type, parent_relative_id in parent_dict.items():
-            if parent_type and parent_relative_id:
-              parent = star.parents.add()
-              parent.type = parent_type if parent_type != "Null" else "Default"
-              parent.relative_id = parent_relative_id
+      if edsm_dict.get('rings'):
+        rings = _format_ringlike(edsm_dict.get('rings'))
+        star.rings.extend(rings)
+      if edsm_dict.get('belts'):
+        belts = _format_ringlike(edsm_dict.get('belts'))
+        star.belts.extend(belts)
+      if edsm_dict.get('parents'):
+        parents = _format_parents(edsm_dict.get('parents'))
+        star.parents.extend(parents)
 
       return star
     elif edsm_dict.get('type') == 'Planet':
-      # print('Planet')
-      return
+      planet = bodies_pb2.Planet()
+      planet.id = edsm_dict.get('id64') if edsm_dict.get('id64') else edsm_dict.get('id')
+      planet.system_id = edsm_dict.get('systemId64')
+      planet.name = edsm_dict.get('name')
+      planet.metadata.type = edsm_dict.get('subType')
+      planet.metadata.distance = edsm_dict.get('distanceToArrival')
+      planet.metadata.mass = edsm_dict.get('earthMasses')
+      planet.metadata.gravity = edsm_dict.get('gravity')
+      planet.metadata.landable = edsm_dict.get('isLandable')
+      planet.metadata.radius = edsm_dict.get('radius')
+      planet.metadata.temperature = edsm_dict.get('surfaceTemperature')
+      planet.orbit.period = edsm_dict.get('rotationalPeriod')
+      planet.orbit.tidally_locked = edsm_dict.get(
+          'rotationalPeriodTidallyLocked')
+      updated_seconds = int(datetime.strptime(
+        edsm_dict.get('updateTime'), 
+        '%Y-%m-%d %H:%M:%S').timestamp()
+      )
+      planet.updated.FromSeconds(updated_seconds)
+
+      # Optional fields
+      if edsm_dict.get('bodyId'):
+        planet.relative_id = edsm_dict.get('bodyId')
+      if edsm_dict.get('surfacePressure'):
+        planet.metadata.pressure = edsm_dict.get('surfacePressure')
+      if edsm_dict.get('volcanismType'):
+        planet.metadata.volcanism = edsm_dict.get('volcanismType')
+      if edsm_dict.get('terraformingState'):
+        planet.metadata.terraforming = edsm_dict.get('terraformingState')
+      if edsm_dict.get('atmosphereType') and edsm_dict.get('atmosphereComposition'):
+        planet.atmosphere.type = edsm_dict.get('atmosphereType')
+        atmosphere_composition = _format_composition(edsm_dict.get('atmosphereComposition'))
+        planet.atmosphere.composition.extend(atmosphere_composition)
+      if edsm_dict.get('solidComposition'):
+        composition = _format_composition(edsm_dict.get('solidComposition'))
+        planet.composition.extend(composition)
+      if edsm_dict.get('materials'):
+        materials = _format_composition(edsm_dict.get('materials'))
+        planet.materials.extend(materials)
+      if edsm_dict.get('rings'):
+        rings = _format_ringlike(edsm_dict.get('rings'))
+        planet.rings.extend(rings)
+      if edsm_dict.get('belts'):
+        belts = _format_ringlike(edsm_dict.get('belts'))
+        planet.belts.extend(belts)
+      if edsm_dict.get('parents'):
+        parents = _format_parents(edsm_dict.get('parents'))
+        planet.parents.extend(parents)
+      if edsm_dict.get('axialTilt'):
+        planet.orbit.axial_tilt = edsm_dict.get('axialTilt')
+      if edsm_dict.get('semiMajorAxis'):
+        planet.orbit.semimajor_axis = edsm_dict.get('semiMajorAxis')
+      if edsm_dict.get('orbitalInclination'):
+        planet.orbit.inclination = edsm_dict.get('orbitalInclination')
+      if edsm_dict.get('orbitalEccentricity'):
+        planet.orbit.eccentricity = edsm_dict.get('orbitalEccentricity')
+      if edsm_dict.get('orbitalPeriod'):
+        planet.orbit.period = edsm_dict.get('orbitalPeriod')
+      if edsm_dict.get('argOfPeriapsis'):
+        planet.orbit.periapsis = edsm_dict.get('argOfPeriapsis')
+
+      return planet
     else:
-      # print('Unsupported type')
+      logging.error('Unsupported body type: %s', edsm_dict.get('type'))
       return
 
   elif file_type == 'population':

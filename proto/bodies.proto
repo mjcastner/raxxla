@@ -1,4 +1,10 @@
 syntax = "proto3";
+import "google/protobuf/timestamp.proto";
+
+message Atmosphere {
+  string type = 1;
+  repeated Composition composition = 2;
+}
 
 message Composition {
   string type = 1;
@@ -13,7 +19,7 @@ message Orbit {
   float eccentricity = 5;
   float inclination = 6;
   float semimajor_axis = 7;
-  float axial_tilt = 8;    
+  float axial_tilt = 8;
 }
 
 message Parent {
@@ -48,14 +54,14 @@ message Planet {
   int64 relative_id = 3;
   string name = 4;
   PlanetMetadata metadata = 5;
-  repeated Composition atmosphere = 6;
+  Atmosphere atmosphere = 6;
   repeated Composition composition = 7;
   repeated Composition materials = 8;
   repeated Ringlike rings = 9;
   repeated Ringlike belts = 10;
-  repeated int64 parents = 11;
+  repeated Parent parents = 11;
   Orbit orbit = 12;
-  int64 updated = 13;
+  google.protobuf.Timestamp updated = 13;
 }
 
 message Star {
@@ -79,5 +85,5 @@ message Star {
   repeated Ringlike belts = 7;
   repeated Parent parents = 8;
   Orbit orbit = 9;
-  int64 updated = 10;
+  google.protobuf.Timestamp updated = 10;
 }
