@@ -1,4 +1,5 @@
 syntax = "proto3";
+import "google/protobuf/timestamp.proto";
 
 message System {
   message Coordinates {
@@ -11,5 +12,5 @@ message System {
   int64 id = 1;
   string name = 2;
   Coordinates coordinates = 3;
-  int64 timestamp = 4;
+  google.protobuf.Timestamp timestamp = 4;
 }
