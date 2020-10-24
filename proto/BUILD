@@ -13,6 +13,18 @@ python_proto_library(
 )
 
 proto_library(
+  name = "poi_proto",
+  srcs = ["poi.proto"],
+  deps = [":system_proto"]
+)
+
+python_proto_library(
+  name = "poi_py_proto",
+  deps = [":poi_proto"],
+  visibility = ["//visibility:public"],
+)
+
+proto_library(
   name = "settlement_proto",
   srcs = ["settlement.proto"],
 )

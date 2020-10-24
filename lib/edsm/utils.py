@@ -314,8 +314,6 @@ def edsm_json_to_proto(file_type: str, edsm_json: str):
   else:
     logging.error('Unsupported input file type.')
     return
-  # elif file_type == 'stations':
-  #   formatted_json = format_stations(edsm_json)
 
 
 def extract_json(raw_input: str):
