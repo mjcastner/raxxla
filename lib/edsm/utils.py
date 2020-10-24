@@ -5,6 +5,7 @@ from datetime import datetime
 from pprint import pprint
 
 from proto import bodies_pb2
+from proto import settlement_pb2
 from proto import society_pb2
 from proto import system_pb2
 
@@ -67,11 +68,10 @@ def edsm_json_to_proto(file_type: str, edsm_json: str):
       star.orbit.period = edsm_dict.get('rotationalPeriod')
       star.orbit.tidally_locked = edsm_dict.get(
           'rotationalPeriodTidallyLocked')
-      updated_seconds = int(datetime.strptime(
+      star.updated = int(datetime.strptime(
         edsm_dict.get('updateTime'), 
         '%Y-%m-%d %H:%M:%S').timestamp()
       )
-      star.updated.FromSeconds(updated_seconds)
 
       # Optional fields
       if edsm_dict.get('axialTilt'):
@@ -120,11 +120,10 @@ def edsm_json_to_proto(file_type: str, edsm_json: str):
       planet.orbit.period = edsm_dict.get('rotationalPeriod')
       planet.orbit.tidally_locked = edsm_dict.get(
           'rotationalPeriodTidallyLocked')
-      updated_seconds = int(datetime.strptime(
+      planet.updated = int(datetime.strptime(
         edsm_dict.get('updateTime'), 
         '%Y-%m-%d %H:%M:%S').timestamp()
       )
-      planet.updated.FromSeconds(updated_seconds)
 
       # Optional fields
       if edsm_dict.get('bodyId'):
@@ -176,11 +175,10 @@ def edsm_json_to_proto(file_type: str, edsm_json: str):
     population = society_pb2.Population()
     population.planet_id = edsm_dict.get('id64')
     population.security = edsm_dict.get('security')
-    updated_seconds = int(datetime.strptime(
+    population.updated = int(datetime.strptime(
         edsm_dict.get('date'), 
         '%Y-%m-%d %H:%M:%S').timestamp()
     )
-    population.updated.FromSeconds(updated_seconds)
 
     # Optional fields
     if edsm_dict.get('allegiance'):
@@ -241,11 +239,10 @@ def edsm_json_to_proto(file_type: str, edsm_json: str):
     powerplay.system_id = edsm_dict.get('id64')
     powerplay.power.name = edsm_dict.get('power')
     powerplay.power.state = edsm_dict.get('powerState')
-    updated_seconds = int(datetime.strptime(
-        edsm_dict.get('date'), 
-        '%Y-%m-%d %H:%M:%S').timestamp()
+    powerplay.updated = int(datetime.strptime(
+      edsm_dict.get('date'), 
+      '%Y-%m-%d %H:%M:%S').timestamp()
     )
-    powerplay.updated.FromSeconds(updated_seconds)
 
     # Optional fields
     if edsm_dict.get('allegiance'):
@@ -257,6 +254,47 @@ def edsm_json_to_proto(file_type: str, edsm_json: str):
 
     return powerplay
 
+  elif file_type == 'stations':
+    settlement = settlement_pb2.Settlement()
+    settlement.id = edsm_dict.get('id')
+    settlement.system_id = edsm_dict.get('systemId64')
+    settlement.name = edsm_dict.get('name')
+    settlement.metadata.type = edsm_dict.get('type')
+    settlement.services.market = edsm_dict.get('haveMarket')
+    settlement.services.shipyard = edsm_dict.get('haveShipyard')
+    settlement.services.outfitting = edsm_dict.get('haveOutfitting')
+    settlement.services.other.extend(edsm_dict.get('otherServices'))
+    settlement.updated = int(datetime.strptime(
+        edsm_dict.get('updateTime', {}).get('information'), 
+        '%Y-%m-%d %H:%M:%S').timestamp()
+    )
+
+    # Optional fields
+    if edsm_dict.get('distanceToArrival'):
+      settlement.metadata.distance = edsm_dict.get('distanceToArrival')
+    if edsm_dict.get('allegiance'):
+      settlement.metadata.allegiance = edsm_dict.get('allegiance')
+    if edsm_dict.get('controllingFaction', {}).get('id'):
+      settlement.metadata.controlling_faction = edsm_dict.get('controllingFaction', {}).get('id')
+    if edsm_dict.get('government'):
+      settlement.metadata.government = edsm_dict.get('government')
+    if edsm_dict.get('marketId'):
+      settlement.economy.id = edsm_dict.get('marketId')
+    if edsm_dict.get('economy'):
+      settlement.economy.type = edsm_dict.get('economy')
+    if edsm_dict.get('secondEconomy'):
+      settlement.economy.sub_type = edsm_dict.get('secondEconomy')
+    if edsm_dict.get('body', {}).get('id'):
+      settlement.parent.id = edsm_dict.get('body', {}).get('id')
+    if edsm_dict.get('body', {}).get('name'):
+      settlement.parent.name = edsm_dict.get('body', {}).get('name')
+    if edsm_dict.get('body', {}).get('latitude'):
+      settlement.parent.latitude = edsm_dict.get('body', {}).get('latitude')
+    if edsm_dict.get('body', {}).get('longitude'):
+      settlement.parent.longitude = edsm_dict.get('body', {}).get('longitude')
+
+    return settlement
+
   elif file_type == 'systems':
     system = system_pb2.System()
     system.id = edsm_dict.get('id64')
@@ -266,11 +304,10 @@ def edsm_json_to_proto(file_type: str, edsm_json: str):
     system.coordinates.z = edsm_dict.get('coords', {}).get('z')
     system.coordinates.coordinates = '%s, %s, %s' % (
         system.coordinates.x, system.coordinates.y, system.coordinates.z)
-    discovered_seconds = int(datetime.strptime(
+    system.timestamp = int(datetime.strptime(
         edsm_dict.get('date'), 
         '%Y-%m-%d %H:%M:%S').timestamp()
     )
-    system.timestamp.FromSeconds(discovered_seconds)
 
     return system
 

@@ -1,5 +1,4 @@
 syntax = "proto3";
-import "google/protobuf/timestamp.proto";
 
 message State {
   string type = 1;
@@ -27,7 +26,7 @@ message Population {
   string security = 6;
   int64 population = 7;
   repeated Faction factions = 8;
-  google.protobuf.Timestamp updated = 9;
+  int64 updated = 9;
 }
 
 message Powerplay {
@@ -41,5 +40,5 @@ message Powerplay {
   string allegiance = 3;
   string state = 4;
   string government = 5;
-  google.protobuf.Timestamp updated = 9;
+  int64 updated = 9;
 }

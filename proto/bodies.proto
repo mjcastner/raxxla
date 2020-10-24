@@ -1,5 +1,4 @@
 syntax = "proto3";
-import "google/protobuf/timestamp.proto";
 
 message Atmosphere {
   string type = 1;
@@ -61,7 +60,7 @@ message Planet {
   repeated Ringlike belts = 10;
   repeated Parent parents = 11;
   Orbit orbit = 12;
-  google.protobuf.Timestamp updated = 13;
+  int64 updated = 13;
 }
 
 message Star {
@@ -85,5 +84,5 @@ message Star {
   repeated Ringlike belts = 7;
   repeated Parent parents = 8;
   Orbit orbit = 9;
-  google.protobuf.Timestamp updated = 10;
+  int64 updated = 10;
 }

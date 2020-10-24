@@ -1,9 +1,8 @@
 syntax = "proto3";
-import "google/protobuf/timestamp.proto";
 
 message Settlement {
   message Economy {
-    int32 id = 1;
+    int64 id = 1;
     string type = 2;
     string sub_type = 3;
   }
@@ -12,8 +11,15 @@ message Settlement {
     string type = 1;
     float distance = 2;
     string allegiance = 3;
-    int32 controlling_faction = 4;
+    int64 controlling_faction = 4;
     string government = 5;
+  }
+
+  message ParentBody {
+    int64 id = 1;
+    string name = 2;
+    float latitude = 3;
+    float longitude = 4;
   }
 
   message Services {
@@ -23,11 +29,12 @@ message Settlement {
     repeated string other = 4;
   }
 
-  int32 id = 1;
-  int32 system_id = 2;
+  int64 id = 1;
+  int64 system_id = 2;
   string name = 3;
   Metadata metadata = 4;
   Economy economy = 5;
   Services services = 6;
-  int32 updated = 7;
+  ParentBody parent = 7;
+  int64 updated = 8;
 }
