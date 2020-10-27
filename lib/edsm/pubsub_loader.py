@@ -4,10 +4,9 @@ import json
 
 import utils
 from commonlib.google import gcs
+from commonlib.google import pubsub
 
-from absl import app
-from absl import flags
-from absl import logging
+from absl import app, flags, logging
 
 # Global vars
 DATASET = 'edsm'
@@ -31,6 +30,8 @@ flags.DEFINE_enum(
     FILE_TYPES_META,
     'EDSM file(s) to process.'
 )
+flags.DEFINE_string('pubsub_topic', None, 'Pub/Sub topic ID.')
+flags.mark_flag_as_required('pubsub_topic')
 flags.mark_flag_as_required('file_type')
 
 
@@ -44,7 +45,7 @@ def gcs_fetch(file_type: str, url: str):
 
 
 def pubsub_loader(file_type: str, gcs_blob):
-  errors = []
+  pubsub_messages = []
   gcs_file = io.BytesIO(gcs_blob.download_as_string())
   decompressed_file = gzip.open(gcs_file, mode='rt')
 
@@ -52,9 +53,15 @@ def pubsub_loader(file_type: str, gcs_blob):
     json_data = utils.extract_json(line)
     if json_data:
       edsm_proto = utils.edsm_json_to_proto(file_type, json_data)
-      print(edsm_proto)
+      pubsub_message = pubsub.send_message(
+            FLAGS.pubsub_topic,
+            edsm_proto.SerializeToString(),
+            dataset=DATASET,
+            table=file_type,
+      )
+      pubsub_messages.append(pubsub_message)
 
-  return errors
+  return pubsub_messages
 
 
 def main(argv):
@@ -71,8 +78,9 @@ def main(argv):
     # edsm_file_blob = gcs_fetch(FLAGS.file_type, URLS[FLAGS.file_type])
     gcs_files.append(edsm_file_blob)
 
-    pubsub_errors = pubsub_loader(FLAGS.file_type, edsm_file_blob)
-    print(pubsub_errors)
+
+  logging.info('Sending processed EDSM data to Pub/Sub...')
+  pubsub_messages = [pubsub_loader(FLAGS.file_type, x) for x in gcs_files]
 
 
 if __name__ == '__main__':

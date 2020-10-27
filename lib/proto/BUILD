@@ -15,7 +15,6 @@ python_proto_library(
 proto_library(
   name = "poi_proto",
   srcs = ["poi.proto"],
-  deps = [":system_proto"]
 )
 
 python_proto_library(

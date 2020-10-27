@@ -4,10 +4,10 @@ import time
 from datetime import datetime
 from pprint import pprint
 
-from proto import bodies_pb2
-from proto import settlement_pb2
-from proto import society_pb2
-from proto import system_pb2
+from raxxla.lib.proto import bodies_pb2
+from raxxla.lib.proto import settlement_pb2
+from raxxla.lib.proto import society_pb2
+from raxxla.lib.proto import system_pb2
 
 from absl import logging
 

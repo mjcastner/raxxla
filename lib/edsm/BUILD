@@ -7,6 +7,7 @@ py_binary(
   deps = [
     requirement("absl-py"),
     "@commonlib//google:gcs",
+    "@commonlib//google:pubsub",
     ":utils",
   ],
 )
@@ -16,9 +17,9 @@ py_library(
   srcs = ["utils.py"],
   deps = [
     requirement("absl-py"),
-    "//proto:bodies_py_proto",
-    "//proto:settlement_py_proto",
-    "//proto:society_py_proto",
-    "//proto:system_py_proto",
+    "//lib/proto:bodies_py_proto",
+    "//lib/proto:settlement_py_proto",
+    "//lib/proto:society_py_proto",
+    "//lib/proto:system_py_proto",
   ],
 )

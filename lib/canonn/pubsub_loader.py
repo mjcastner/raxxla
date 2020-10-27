@@ -1,7 +1,6 @@
-from pprint import pprint
-
+from commonlib.google import pubsub
 from commonlib.google import sheets
-from proto import poi_pb2
+from raxxla.lib.proto import poi_pb2
 
 from absl import app, flags, logging
 
@@ -11,19 +10,18 @@ SCIENCE_DB_URL = 'https://docs.google.com/spreadsheets/d/1qd38O5farcCHCRodQnJntI
 NOTABLE_PHENOMENA_URL = 'https://docs.google.com/spreadsheets/d/1IY7R2Q74tBgAZUjGdFT5IWhD5c4RRh2Ad_y90slNl7s/'
 CANONN_DATA = [
   {'name': 'bark_mounds', 'sheet_url': SCIENCE_DB_URL, 'sheet_name': 'BM'},
-  # {'name': 'brain_trees', 'sheet_url': SCIENCE_DB_URL, 'sheet_name': 'BT'},
   {'name': 'crystalline_shards', 'sheet_url': SCIENCE_DB_URL,
-   'sheet_name': 'CS'},
+      'sheet_name': 'CS'},
   {'name': 'generation_ships', 'sheet_url': SCIENCE_DB_URL,
-   'sheet_name': 'GEN'},
+      'sheet_name': 'GEN'},
   {'name': 'guardian_beacons', 'sheet_url': SCIENCE_DB_URL, 'sheet_name': 'GB'},
   {'name': 'guardian_ruins', 'sheet_url': SCIENCE_DB_URL, 'sheet_name': 'GR'},
   {'name': 'hyperdictions', 'sheet_url': SCIENCE_DB_URL, 'sheet_name': 'HD'},
   {'name': 'thargoid_barnacles', 'sheet_url': SCIENCE_DB_URL,
-   'sheet_name': 'TB'},
+      'sheet_name': 'TB'},
   {'name': 'tube_worms', 'sheet_url': SCIENCE_DB_URL, 'sheet_name': 'TW'},
   {'name': 'notable_phenomena', 'sheet_url': NOTABLE_PHENOMENA_URL,
-   'sheet_name': 'NP Repository'},
+      'sheet_name': 'NP Repository'},
 ]
 FILE_TYPES = [x.get('name') for x in CANONN_DATA]
 FILE_TYPES_META = FILE_TYPES.copy()
@@ -31,13 +29,10 @@ FILE_TYPES_META.append('all')
 
 # Define flags
 FLAGS = flags.FLAGS
-flags.DEFINE_enum(
-    'file_type',
-    None,
-    FILE_TYPES_META,
-    'Canonn file(s) to process.'
-)
+flags.DEFINE_enum('file_type', None, FILE_TYPES_META, 'File(s) to process.')
+flags.DEFINE_string('pubsub_topic', None, 'Pub/Sub topic ID.')
 flags.mark_flag_as_required('file_type')
+flags.mark_flag_as_required('pubsub_topic')
 
 
 def canonn_dict_to_proto(sheet_type: str, canonn_dict: dict):
@@ -248,8 +243,7 @@ def canonn_dict_to_proto(sheet_type: str, canonn_dict: dict):
     return False
 
 
-def main(argv):
-  def process_sheet(sheet_dict: dict):
+def process_sheet(sheet_dict: dict):
     logging.info('Processing Canonn sheet: %s', sheet_dict.get('name'))
     sheet = sheets.get_spreadsheet(sheet_dict.get('sheet_url'))
     worksheet = sheet.worksheet(sheet_dict.get('sheet_name'))
@@ -258,14 +252,25 @@ def main(argv):
     proto_batch = []
     for row_dict in worksheet_df.to_dict('records'):
       canonn_proto = canonn_dict_to_proto(sheet_dict.get('name'), row_dict)
-      print(canonn_proto)
+      if canonn_proto:
+        pubsub_message = pubsub.send_message(
+            FLAGS.pubsub_topic,
+            canonn_proto.SerializeToString(),
+            dataset=DATASET,
+            table=sheet_dict.get('name'),
+        )
+        proto_batch.append(pubsub_message)
+    
+    return proto_batch
 
+
+def main(argv):
   if FLAGS.file_type == 'all':
-    for sheet_dict in CANONN_DATA:
-      proto_batch_status = process_sheet(sheet_dict)  
+    proto_batch = [process_sheet(x) for x in CANONN_DATA]
+
   else:
     sheet_dict = next(x for x in CANONN_DATA if x.get('name') == FLAGS.file_type)
-    proto_batch_status = process_sheet(sheet_dict)    
+    proto_batch = process_sheet(sheet_dict)
 
 
 if __name__ == '__main__':

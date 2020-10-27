@@ -6,7 +6,8 @@ py_binary(
   srcs = ["pubsub_loader.py"],
   deps = [
     requirement("absl-py"),
+    "@commonlib//google:pubsub",
     "@commonlib//google:sheets",
-    "//proto:poi_py_proto",
+    "//lib/proto:poi_py_proto",
   ],
 )
