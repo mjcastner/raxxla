@@ -6,6 +6,7 @@ py_binary(
   srcs = ["pubsub_loader.py"],
   deps = [
     requirement("absl-py"),
+    "@commonlib//google:bigquery",
     "@commonlib//google:gcs",
     "@commonlib//google:pubsub",
     ":utils",
