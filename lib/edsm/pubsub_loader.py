@@ -90,13 +90,12 @@ def main(argv):
     # edsm_file_blob = gcs_fetch(FLAGS.file_type, URLS[FLAGS.file_type])
     gcs_files.append(edsm_file_blob)
 
-    logging.info('Generating NDJSON file(s)...')
     ndjson_file = generate_ndjson_file(FLAGS.file_type, edsm_file_blob)
     gcs_files.append(ndjson_file)
 
     logging.info('Generating BigQuery table at %s.%s', DATASET, FLAGS.file_type)
     bigquery_table = bigquery_loader(FLAGS.file_type, ndjson_file)
-    print(bigquery_table.result())
+    logging.info('Pipeline complete!')
 
 
 if __name__ == '__main__':
