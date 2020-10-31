@@ -6,7 +6,6 @@ import tempfile
 import utils
 from commonlib.google import bigquery
 from commonlib.google import gcs
-from commonlib.google import pubsub
 
 from absl import app, flags, logging
 from google.protobuf.json_format import MessageToJson

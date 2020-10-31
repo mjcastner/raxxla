@@ -1,7 +1,10 @@
 load("@rules_python//python:defs.bzl", "py_binary", "py_library")
 load("@raxxla_py_deps//:requirements.bzl", "requirement")
 load("@io_bazel_rules_docker//python3:image.bzl", "py3_image")
-load("@io_bazel_rules_docker//container:container.bzl", "container_push")
+load(
+  "@io_bazel_rules_docker//container:container.bzl",
+  "container_push",
+)
 
 py_library(
   name = "utils",
@@ -22,7 +25,6 @@ py_binary(
     requirement("absl-py"),
     "@commonlib//google:bigquery",
     "@commonlib//google:gcs",
-    "@commonlib//google:pubsub",
     ":utils",
   ],
 )
@@ -35,7 +37,6 @@ py3_image(
     requirement("absl-py"),
     "@commonlib//google:bigquery",
     "@commonlib//google:gcs",
-    "@commonlib//google:pubsub",
     ":utils",
   ],
 )
