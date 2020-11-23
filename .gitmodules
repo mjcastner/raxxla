@@ -1,0 +1,3 @@
+[submodule "app/commonlib"]
+	path = app/commonlib
+	url = git@github.com:mjcastner/commonlib.git
