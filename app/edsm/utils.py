@@ -2,14 +2,14 @@ import json
 import re
 import time
 from datetime import datetime
-from pprint import pprint
 
-from raxxla.lib.proto import bodies_pb2
-from raxxla.lib.proto import settlement_pb2
-from raxxla.lib.proto import society_pb2
-from raxxla.lib.proto import system_pb2
+from protos import bodies_pb2
+from protos import settlement_pb2
+from protos import society_pb2
+from protos import system_pb2
 
 from absl import logging
+from google.protobuf.json_format import MessageToJson
 
 # Global vars
 JSON_RE_PATTERN = re.compile(r'(\{.*\})')
@@ -104,7 +104,7 @@ def edsm_json_to_proto(file_type: str, edsm_json: str):
         parents = _format_parents(edsm_dict.get('parents'))
         star.parents.extend(parents)
 
-      return star
+      return MessageToJson(star, indent=0)
     elif edsm_dict.get('type') == 'Planet':
       planet = bodies_pb2.Planet()
       planet.id = edsm_dict.get('id64') if edsm_dict.get('id64') else edsm_dict.get('id')
@@ -166,7 +166,7 @@ def edsm_json_to_proto(file_type: str, edsm_json: str):
       if edsm_dict.get('argOfPeriapsis'):
         planet.orbit.periapsis = edsm_dict.get('argOfPeriapsis')
 
-      return planet
+      return MessageToJson(planet, indent=0)
     else:
       logging.error('Unsupported body type: %s', edsm_dict.get('type'))
       return
@@ -232,7 +232,7 @@ def edsm_json_to_proto(file_type: str, edsm_json: str):
           recovering_state.name = recovering_state_dict.get('state')
           recovering_state.type = 'Recovering'
 
-    return population
+    return MessageToJson(population, indent=0)
 
   elif file_type == 'powerplay':
     powerplay = society_pb2.Powerplay()
@@ -252,7 +252,7 @@ def edsm_json_to_proto(file_type: str, edsm_json: str):
     if edsm_dict.get('state'):
       powerplay.state = edsm_dict.get('state')
 
-    return powerplay
+    return MessageToJson(powerplay, indent=0)
 
   elif file_type == 'stations':
     settlement = settlement_pb2.Settlement()
@@ -293,7 +293,7 @@ def edsm_json_to_proto(file_type: str, edsm_json: str):
     if edsm_dict.get('body', {}).get('longitude'):
       settlement.parent.longitude = edsm_dict.get('body', {}).get('longitude')
 
-    return settlement
+    return MessageToJson(settlement, indent=0)
 
   elif file_type == 'systems':
     system = system_pb2.System()
@@ -309,7 +309,8 @@ def edsm_json_to_proto(file_type: str, edsm_json: str):
         '%Y-%m-%d %H:%M:%S').timestamp()
     )
 
-    return system
+    return MessageToJson(system, indent=0)
+    
 
   else:
     logging.error('Unsupported input file type.')

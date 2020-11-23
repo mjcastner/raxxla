@@ -1,6 +1,6 @@
-from commonlib.google import pubsub
+from commonlib.google import gcs
 from commonlib.google import sheets
-from raxxla.lib.proto import poi_pb2
+from protos import poi_pb2
 
 from absl import app, flags, logging
 
@@ -29,10 +29,9 @@ FILE_TYPES_META.append('all')
 
 # Define flags
 FLAGS = flags.FLAGS
+flags.DEFINE_boolean('cleanup_files', False, 'Cleanup GCS files.')
 flags.DEFINE_enum('file_type', None, FILE_TYPES_META, 'File(s) to process.')
-flags.DEFINE_string('pubsub_topic', None, 'Pub/Sub topic ID.')
 flags.mark_flag_as_required('file_type')
-flags.mark_flag_as_required('pubsub_topic')
 
 
 def canonn_dict_to_proto(sheet_type: str, canonn_dict: dict):
@@ -248,7 +247,7 @@ def process_sheet(sheet_dict: dict):
     sheet = sheets.get_spreadsheet(sheet_dict.get('sheet_url'))
     worksheet = sheet.worksheet(sheet_dict.get('sheet_name'))
     worksheet_df = sheets.worksheet_to_dataframe(worksheet)
-    
+
     proto_batch = []
     for row_dict in worksheet_df.to_dict('records'):
       canonn_proto = canonn_dict_to_proto(sheet_dict.get('name'), row_dict)
