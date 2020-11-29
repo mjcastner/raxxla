@@ -24,6 +24,7 @@ URLS = {
 FILE_TYPES = list(URLS.keys())
 FILE_TYPES_META = FILE_TYPES.copy()
 FILE_TYPES_META.append('all')
+NUM_CPUS = multiprocessing.cpu_count()
 PROCESS_POOL = multiprocessing.Pool(processes=multiprocessing.cpu_count())
 DOWNLOAD_POOL = ThreadPoolExecutor(max_workers=len(URLS))
 
@@ -57,18 +58,43 @@ def gcs_fetch(file_type: str, url: str):
   return gcs_blob
 
 
+def format_json(file_type, input_queue, output_queue):
+  while True:
+    json_data = utils.extract_json(input_queue.get())
+    if json_data:
+      edsm_proto_json = utils.edsm_json_to_proto(file_type, json_data).replace('\n','')
+      output_queue.put(edsm_proto_json)
+
+
+def write_ndjson(input_queue, output_file):
+  while True:
+    json_line = input_queue.get()
+    output_file.write(json_line.encode() + b'\n')
+
+
 def generate_ndjson_file(file_type: str, gcs_blob):
   gcs_file = io.BytesIO(gcs_blob.download_as_string())
   decompressed_file = gzip.open(gcs_file, mode='rt')
   ndjson_file = tempfile.TemporaryFile()
+  transform_queue = multiprocessing.Queue(maxsize=NUM_CPUS)
+  write_queue = multiprocessing.Queue(maxsize=1)
 
-  json_data = PROCESS_POOL.map(utils.extract_json, decompressed_file)
-  json_lines = [(file_type, x) for x in json_data if x is not None]
-  edsm_proto_data = PROCESS_POOL.starmap(utils.edsm_json_to_proto, json_lines)
-  edsm_proto_json = [x.replace('\n','') for x in edsm_proto_data]
+  transform_process = multiprocessing.Process(target=format_json, args=(file_type, transform_queue, write_queue))
+  transform_process.daemon = True
+  transform_process.start()
 
-  for edsm_json_line in edsm_proto_json:
-    ndjson_file.write(edsm_json_line.encode() + b'\n')
+  write_process = multiprocessing.Process(target=write_ndjson, args=(write_queue, ndjson_file))
+  write_process.daemon = True
+  write_process.start()
+
+  logging.info('Transforming raw JSON into formatted NDJSON...')
+  for line in decompressed_file:
+    transform_queue.put(line)
+
+  transform_queue.close()
+  write_queue.close()
+  transform_process.join(3)
+  write_process.join(3)
 
   ndjson_file.seek(0)
   gcs_path = '%s/%s.ndjson' % (DATASET, file_type)
@@ -99,7 +125,8 @@ def main(argv):
 
   else:
     logging.info('Fetching %s from EDSM...', FLAGS.file_type)
-    edsm_file_blob = gcs_fetch(FLAGS.file_type, URLS[FLAGS.file_type])
+    edsm_file_blob = gcs.get_blob('%s/%s.gz' % (DATASET, FLAGS.file_type))
+    # edsm_file_blob = gcs_fetch(FLAGS.file_type, URLS[FLAGS.file_type])
     gcs_files.append(edsm_file_blob)
 
     ndjson_file = generate_ndjson_file(FLAGS.file_type, edsm_file_blob)
