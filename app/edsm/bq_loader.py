@@ -1,3 +1,4 @@
+import functools
 import gzip
 import io
 import json
@@ -5,7 +6,7 @@ import itertools
 import multiprocessing
 import tempfile
 import time
-from concurrent.futures import ThreadPoolExecutor
+from concurrent import futures
 
 import utils
 from commonlib.google import bigquery
@@ -27,7 +28,7 @@ FILE_TYPES_META = FILE_TYPES.copy()
 FILE_TYPES_META.append('all')
 NUM_CPUS = multiprocessing.cpu_count()
 PROCESS_POOL = multiprocessing.Pool(processes=NUM_CPUS)
-DOWNLOAD_POOL = ThreadPoolExecutor(max_workers=len(URLS))
+DOWNLOAD_POOL = futures.ThreadPoolExecutor(max_workers=len(URLS))
 
 # Define flags
 FLAGS = flags.FLAGS
@@ -53,28 +54,34 @@ def gcs_fetch(file_type: str, url: str):
 
 @profile
 def generate_ndjson_file(file_type: str, gcs_blob):
-    gcs_file = io.BytesIO(gcs_blob.download_as_string())
-    decompressed_file = gzip.open(gcs_file, mode='rt')
+    gz_file = tempfile.TemporaryFile()
+    gcs_blob.download_to_file(gz_file)
+    gz_file.seek(0)
+
+    decompressed_file = gzip.open(gz_file, mode='rt')
     ndjson_file = tempfile.TemporaryFile()
 
     json_data = PROCESS_POOL.imap(utils.extract_json, decompressed_file,
-                                  100)
-    json_data_filtered = filter(lambda x: x is not None, json_data)
-    args = itertools.repeat(file_type)
-    json_lines = zip(args, json_data_filtered)
-    def ndjson_writer(json_lines: list):
-      for json_line in json_lines:
-        formatted_json = json_line.replace('\n', '')
-        ndjson_file.write(formatted_json.encode() + b'\n')
+                                  NUM_CPUS)
 
-    edsm_proto_data = PROCESS_POOL.starmap_async(utils.edsm_json_to_proto, json_lines, callback=ndjson_writer)
-    edsm_proto_data.wait()
+    with futures.ProcessPoolExecutor(max_workers=NUM_CPUS) as executor:
+        proto_futures = []
+        for json_line in json_data:
+            if json_line:
+                proto_futures.append(
+                    executor.submit(utils.edsm_json_to_proto, file_type,
+                                    json_line))
+
+        for future in futures.as_completed(proto_futures):
+            proto_json = future.result().replace('\n', '')
+            ndjson_file.write(proto_json.encode() + b'\n')
 
     ndjson_file.seek(0)
     gcs_path = '%s/%s.ndjson' % (DATASET, file_type)
     gcs_uri = gcs.get_gcs_uri(gcs_path)
     logging.info('Generating NDJSON file at %s...', gcs_uri)
     ndjson_gcs_file = gcs.upload_file(ndjson_file, gcs_path)
+    decompressed_file.close()
     ndjson_file.close()
 
     return ndjson_gcs_file

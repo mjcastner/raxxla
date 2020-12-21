@@ -1,3 +1,2 @@
 absl-py==0.10.0
 memory_profiler
-line_profiler
