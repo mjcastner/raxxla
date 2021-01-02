@@ -113,7 +113,6 @@ def edsm_json_to_proto(file_type: str, edsm_json: str):
             planet.metadata.type = edsm_dict.get('subType')
             planet.metadata.distance = edsm_dict.get('distanceToArrival')
             planet.metadata.mass = edsm_dict.get('earthMasses')
-            planet.metadata.gravity = edsm_dict.get('gravity')
             planet.metadata.landable = edsm_dict.get('isLandable')
             planet.metadata.radius = edsm_dict.get('radius')
             planet.metadata.temperature = edsm_dict.get('surfaceTemperature')
@@ -127,6 +126,8 @@ def edsm_json_to_proto(file_type: str, edsm_json: str):
             # Optional fields
             if edsm_dict.get('bodyId'):
                 planet.relative_id = edsm_dict.get('bodyId')
+            if edsm_dict.get('gravity'):
+                planet.metadata.gravity = edsm_dict.get('gravity')
             if edsm_dict.get('surfacePressure'):
                 planet.metadata.pressure = edsm_dict.get('surfacePressure')
             if edsm_dict.get('volcanismType'):
