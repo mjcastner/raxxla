@@ -1,3 +1,4 @@
+import functools
 import json
 import re
 from datetime import datetime
@@ -13,6 +14,45 @@ from google.protobuf.json_format import MessageToJson
 # Global vars
 JSON_RE_PATTERN = re.compile(r'(\{.*\})')
 JSON_RE_SEARCH = JSON_RE_PATTERN.search
+
+# Schema mappings
+POWERPLAY_MAPPING = {
+    'system_id': 'id64',
+    'power.name': 'power',
+    'power.state': 'powerState',
+    'allegiance': 'allegiance',
+    'government': 'government',
+    'state': 'state',
+    'timestamp_fields': {
+        'updated': 'date',
+    },
+}
+
+
+def rsetattr(obj, attr, val):
+    pre, _, post = attr.rpartition('.')
+    return setattr(rgetattr(obj, pre) if pre else obj, post, val)
+
+
+def rgetattr(obj, attr, *args):
+    def _getattr(obj, attr):
+        return getattr(obj, attr, *args)
+
+    return functools.reduce(_getattr, [obj] + attr.split('.'))
+
+
+def mapping_to_proto(proto_obj, dict_obj: dict, dict_mapping: dict):
+    for k, v in dict_mapping.items():
+        if k == 'timestamp_fields':
+            for ts_k, ts_v in v.items():
+                int_ts = int(
+                    datetime.strptime(dict_obj.get(ts_v),
+                                      '%Y-%m-%d %H:%M:%S').timestamp())
+                rsetattr(proto_obj, ts_k, int_ts)
+        else:
+            rsetattr(proto_obj, k, dict_obj.get(v))
+
+    return proto_obj
 
 
 def edsm_json_to_proto(file_type: str, edsm_json: str):
@@ -240,21 +280,9 @@ def edsm_json_to_proto(file_type: str, edsm_json: str):
         return MessageToJson(population, indent=0)
 
     elif file_type == 'powerplay':
-        powerplay = society_pb2.Powerplay()
-        powerplay.system_id = edsm_dict.get('id64')
-        powerplay.power.name = edsm_dict.get('power')
-        powerplay.power.state = edsm_dict.get('powerState')
-        powerplay.updated = int(
-            datetime.strptime(edsm_dict.get('date'),
-                              '%Y-%m-%d %H:%M:%S').timestamp())
-
-        # Optional fields
-        if edsm_dict.get('allegiance'):
-            powerplay.allegiance = edsm_dict.get('allegiance')
-        if edsm_dict.get('government'):
-            powerplay.government = edsm_dict.get('government')
-        if edsm_dict.get('state'):
-            powerplay.state = edsm_dict.get('state')
+        powerplay_base = society_pb2.Powerplay()
+        powerplay = mapping_to_proto(powerplay_base, edsm_dict,
+                                     POWERPLAY_MAPPING)
 
         return MessageToJson(powerplay, indent=0)
 
