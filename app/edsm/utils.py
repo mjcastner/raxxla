@@ -1,5 +1,6 @@
 import functools
 import json
+from pprint import pprint
 import re
 from datetime import datetime
 
@@ -16,6 +17,19 @@ JSON_RE_PATTERN = re.compile(r'(\{.*\})')
 JSON_RE_SEARCH = JSON_RE_PATTERN.search
 
 # Schema mappings
+POPULATION_MAPPING = {
+    'planet_id': 'id64',
+    'security': 'security',
+    'allegiance': 'allegiance',
+    'economy': 'economy',
+    'government': 'government',
+    'population': 'population',
+    'state': 'state',
+    'timestamp_fields': {
+        'updated': 'date',
+    },
+}
+
 POWERPLAY_MAPPING = {
     'system_id': 'id64',
     'power.name': 'power',
@@ -27,6 +41,45 @@ POWERPLAY_MAPPING = {
         'updated': 'date',
     },
 }
+
+STATION_MAPPING = {
+    'id': 'id',
+    'system_id': 'systemId64',
+    'name': 'name',
+    'metadata.type': 'type',
+    'services.market': 'haveMarket',
+    'services.shipyard': 'haveShipyard',
+    'services.outfitting': 'haveOutfitting',
+    'metadata.distance': 'distanceToArrival',
+    'metadata.allegiance': 'allegiance',
+    'metadata.government': 'government',
+    'economy.id': 'marketId',
+    'economy.type': 'economy',
+    'economy.sub_type': 'secondEconomy',
+    'parent.id': 'body.id',
+    'parent.name': 'body.name',
+    'parent.latitude': 'body.latitude',
+    'parent.longitude': 'body.longitude',
+    'metadata.controlling_faction': 'controllingFaction.id',
+    'timestamp_fields': {
+        'updated': 'updateTime.information',
+    },
+}
+
+SYSTEM_MAPPING = {
+    'id': 'id64',
+    'name': 'name',
+    'coordinates.x': 'coords.x',
+    'coordinates.y': 'coords.y',
+    'coordinates.z': 'coords.z',
+    'timestamp_fields': {
+        'timestamp': 'date',
+    },
+}
+
+
+def rdictget(input_dict: dict, path: str):
+    return functools.reduce(dict.get, path.split('.'), input_dict)
 
 
 def rsetattr(obj, attr, val):
@@ -43,14 +96,17 @@ def rgetattr(obj, attr, *args):
 
 def mapping_to_proto(proto_obj, dict_obj: dict, dict_mapping: dict):
     for k, v in dict_mapping.items():
-        if k == 'timestamp_fields':
-            for ts_k, ts_v in v.items():
-                int_ts = int(
-                    datetime.strptime(dict_obj.get(ts_v),
-                                      '%Y-%m-%d %H:%M:%S').timestamp())
-                rsetattr(proto_obj, ts_k, int_ts)
-        else:
-            rsetattr(proto_obj, k, dict_obj.get(v))
+        try:
+            if k == 'timestamp_fields':
+                for ts_k, ts_v in v.items():
+                    int_ts = int(
+                        datetime.strptime(rdictget(dict_obj, ts_v),
+                                          '%Y-%m-%d %H:%M:%S').timestamp())
+                    rsetattr(proto_obj, ts_k, int_ts)
+            else:
+                rsetattr(proto_obj, k, rdictget(dict_obj, v))
+        except TypeError:
+            pass
 
     return proto_obj
 
@@ -218,25 +274,10 @@ def edsm_json_to_proto(file_type: str, edsm_json: str):
 
     elif file_type == 'population':
         population = society_pb2.Population()
-        population.planet_id = edsm_dict.get('id64')
-        population.security = edsm_dict.get('security')
-        population.updated = int(
-            datetime.strptime(edsm_dict.get('date'),
-                              '%Y-%m-%d %H:%M:%S').timestamp())
-
-        # Optional fields
-        if edsm_dict.get('allegiance'):
-            population.allegiance = edsm_dict.get('allegiance')
-        if edsm_dict.get('economy'):
-            population.economy = edsm_dict.get('economy')
-        if edsm_dict.get('government'):
-            population.government = edsm_dict.get('government')
-        if edsm_dict.get('population'):
-            population.population = edsm_dict.get('population')
-        if edsm_dict.get('state'):
-            population.state = edsm_dict.get('state')
+        mapping_to_proto(population, edsm_dict, POPULATION_MAPPING)
 
         # Factions
+        # TODO(mjcastner): Update this to schema mapping / setattr approach
         factions = edsm_dict.get('factions')
         if factions:
             for faction_dict in factions:
@@ -280,68 +321,23 @@ def edsm_json_to_proto(file_type: str, edsm_json: str):
         return MessageToJson(population, indent=0)
 
     elif file_type == 'powerplay':
-        powerplay_base = society_pb2.Powerplay()
-        powerplay = mapping_to_proto(powerplay_base, edsm_dict,
-                                     POWERPLAY_MAPPING)
+        powerplay = society_pb2.Powerplay()
+        mapping_to_proto(powerplay, edsm_dict, POWERPLAY_MAPPING)
 
         return MessageToJson(powerplay, indent=0)
 
     elif file_type == 'stations':
         settlement = settlement_pb2.Settlement()
-        settlement.id = edsm_dict.get('id')
-        settlement.system_id = edsm_dict.get('systemId64')
-        settlement.name = edsm_dict.get('name')
-        settlement.metadata.type = edsm_dict.get('type')
-        settlement.services.market = edsm_dict.get('haveMarket')
-        settlement.services.shipyard = edsm_dict.get('haveShipyard')
-        settlement.services.outfitting = edsm_dict.get('haveOutfitting')
+        mapping_to_proto(settlement, edsm_dict, STATION_MAPPING)
         settlement.services.other.extend(edsm_dict.get('otherServices'))
-        settlement.updated = int(
-            datetime.strptime(
-                edsm_dict.get('updateTime', {}).get('information'),
-                '%Y-%m-%d %H:%M:%S').timestamp())
-
-        # Optional fields
-        if edsm_dict.get('distanceToArrival'):
-            settlement.metadata.distance = edsm_dict.get('distanceToArrival')
-        if edsm_dict.get('allegiance'):
-            settlement.metadata.allegiance = edsm_dict.get('allegiance')
-        if edsm_dict.get('controllingFaction', {}).get('id'):
-            settlement.metadata.controlling_faction = edsm_dict.get(
-                'controllingFaction', {}).get('id')
-        if edsm_dict.get('government'):
-            settlement.metadata.government = edsm_dict.get('government')
-        if edsm_dict.get('marketId'):
-            settlement.economy.id = edsm_dict.get('marketId')
-        if edsm_dict.get('economy'):
-            settlement.economy.type = edsm_dict.get('economy')
-        if edsm_dict.get('secondEconomy'):
-            settlement.economy.sub_type = edsm_dict.get('secondEconomy')
-        if edsm_dict.get('body', {}).get('id'):
-            settlement.parent.id = edsm_dict.get('body', {}).get('id')
-        if edsm_dict.get('body', {}).get('name'):
-            settlement.parent.name = edsm_dict.get('body', {}).get('name')
-        if edsm_dict.get('body', {}).get('latitude'):
-            settlement.parent.latitude = edsm_dict.get('body',
-                                                       {}).get('latitude')
-        if edsm_dict.get('body', {}).get('longitude'):
-            settlement.parent.longitude = edsm_dict.get('body',
-                                                        {}).get('longitude')
 
         return MessageToJson(settlement, indent=0)
 
     elif file_type == 'systems':
         system = system_pb2.System()
-        system.id = edsm_dict.get('id64')
-        system.name = edsm_dict.get('name')
-        system.coordinates.x = edsm_dict.get('coords', {}).get('x')
-        system.coordinates.y = edsm_dict.get('coords', {}).get('y')
-        system.coordinates.z = edsm_dict.get('coords', {}).get('z')
+        mapping_to_proto(system, edsm_dict, SYSTEM_MAPPING)
         system.coordinates.coordinates = '%s, %s, %s' % (
             system.coordinates.x, system.coordinates.y, system.coordinates.z)
-        system.timestamp = int(
-            datetime.strptime(edsm_dict.get('date'),
-                              '%Y-%m-%d %H:%M:%S').timestamp())
 
         return MessageToJson(system, indent=0)
 
