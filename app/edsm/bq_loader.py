@@ -29,6 +29,7 @@ FILE_TYPES_META.append('all')
 NUM_CPUS = multiprocessing.cpu_count()
 PROCESS_POOL = multiprocessing.Pool(processes=NUM_CPUS)
 DOWNLOAD_POOL = futures.ThreadPoolExecutor(max_workers=len(URLS))
+BATCH_SIZE = 536870912  # 0.5 GB
 
 # Define flags
 FLAGS = flags.FLAGS
@@ -61,20 +62,27 @@ def generate_ndjson_file(file_type: str, gcs_blob):
     decompressed_file = gzip.open(gz_file, mode='rt')
     ndjson_file = tempfile.TemporaryFile()
 
-    json_data = PROCESS_POOL.imap(utils.extract_json, decompressed_file,
-                                  NUM_CPUS)
-
+    line_batch = decompressed_file.readlines(BATCH_SIZE)
+    total_batch_size = 0
     with futures.ProcessPoolExecutor(max_workers=NUM_CPUS) as executor:
-        proto_futures = []
-        for json_line in json_data:
-            if json_line:
-                proto_futures.append(
-                    executor.submit(utils.edsm_json_to_proto, file_type,
-                                    json_line))
+        while len(line_batch) > 0:
+            json_data = PROCESS_POOL.imap(utils.extract_json, line_batch,
+                                          NUM_CPUS)
 
-        for future in futures.as_completed(proto_futures):
-            proto_json = future.result().replace('\n', '')
-            ndjson_file.write(proto_json.encode() + b'\n')
+            proto_futures = [
+                executor.submit(utils.edsm_json_to_proto, file_type, x)
+                for x in json_data if x
+            ]
+
+            futures.wait(proto_futures)
+            json_lines = [x.result().replace('\n', '') for x in proto_futures]
+            ndjson_lines = [x.encode() + b'\n' for x in json_lines]
+            ndjson_file.writelines(ndjson_lines)
+            proto_futures.clear()
+
+            total_batch_size += len(line_batch)
+            logging.info('Processed %s lines...', total_batch_size)
+            line_batch = decompressed_file.readlines(BATCH_SIZE)
 
     ndjson_file.seek(0)
     gcs_path = '%s/%s.ndjson' % (DATASET, file_type)
