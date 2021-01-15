@@ -115,7 +115,8 @@ def main(argv):
 
     else:
         logging.info('Fetching %s from EDSM...', FLAGS.file_type)
-        edsm_file_blob = gcs.get_blob('%s/%s.gz' % (DATASET, FLAGS.file_type))
+        gcs_path = '%s/%s.gz' % (DATASET, FLAGS.file_type)
+        edsm_file_blob = gcs.get_blob(gcs_path)
         # edsm_file_blob = gcs_fetch(FLAGS.file_type, URLS[FLAGS.file_type])
         gcs_files.append(edsm_file_blob)
 
