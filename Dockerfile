@@ -7,6 +7,4 @@ RUN pip install -r requirements.txt \
     && apt-get install -y protobuf-compiler \
     && protoc -I protos --python_out protos protos/*.proto
 ENV PYTHONPATH="/app"
-# ENTRYPOINT ["kernprof.py", "-v", "-l"]
-ENTRYPOINT ["python", "-m", "memory_profiler"]
-# ENTRYPOINT ["python"]
+ENTRYPOINT ["python"]

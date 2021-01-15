@@ -71,7 +71,7 @@ def generate_ndjson_file(file_type: str, gcs_blob):
 
             proto_futures = [
                 executor.submit(utils.edsm_json_to_proto, file_type, x)
-                for x in json_data if x
+                for x in json_data if xq
             ]
 
             futures.wait(proto_futures)
