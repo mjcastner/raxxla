@@ -1,12 +1,14 @@
 import functools
+import gzip
+import io
 import json
 import re
-import tempfile
 import time
+import urllib.request
+import urllib.error
 
 from concurrent import futures
 from datetime import datetime
-from pprint import pprint
 
 from commonlib.google.dataflow import beam
 from commonlib.google import bigquery
@@ -28,8 +30,6 @@ FILE_TYPES = list(URLS.keys())
 FILE_TYPES_META = FILE_TYPES.copy()
 FILE_TYPES_META.append('all')
 DOWNLOAD_POOL = futures.ThreadPoolExecutor(max_workers=len(URLS))
-JSON_RE_PATTERN = re.compile(r'(\{.*\})')
-JSON_RE_SEARCH = JSON_RE_PATTERN.search
 
 # Define flags
 FLAGS = flags.FLAGS
@@ -37,67 +37,6 @@ flags.DEFINE_boolean('cleanup_files', False, 'Cleanup GCS files.')
 flags.DEFINE_enum('file_type', None, FILE_TYPES_META,
                   'EDSM file(s) to process.')
 flags.mark_flag_as_required('file_type')
-
-# Schema mappings
-POPULATION_MAPPING = {
-    'planet_id': 'id64',
-    'security': 'security',
-    'allegiance': 'allegiance',
-    'economy': 'economy',
-    'government': 'government',
-    'population': 'population',
-    'state': 'state',
-    'timestamp_fields': {
-        'updated': 'date',
-    },
-}
-
-POWERPLAY_MAPPING = {
-    'system_id': 'id64',
-    'power.name': 'power',
-    'power.state': 'powerState',
-    'allegiance': 'allegiance',
-    'government': 'government',
-    'state': 'state',
-    'timestamp_fields': {
-        'updated': 'date',
-    },
-}
-
-STATION_MAPPING = {
-    'id': 'id',
-    'system_id': 'systemId64',
-    'name': 'name',
-    'metadata.type': 'type',
-    'services.market': 'haveMarket',
-    'services.shipyard': 'haveShipyard',
-    'services.outfitting': 'haveOutfitting',
-    'metadata.distance': 'distanceToArrival',
-    'metadata.allegiance': 'allegiance',
-    'metadata.government': 'government',
-    'economy.id': 'marketId',
-    'economy.type': 'economy',
-    'economy.sub_type': 'secondEconomy',
-    'parent.id': 'body.id',
-    'parent.name': 'body.name',
-    'parent.latitude': 'body.latitude',
-    'parent.longitude': 'body.longitude',
-    'metadata.controlling_faction': 'controllingFaction.id',
-    'timestamp_fields': {
-        'updated': 'updateTime.information',
-    },
-}
-
-SYSTEM_MAPPING = {
-    'id': 'id64',
-    'name': 'name',
-    'coordinates.x': 'coords.x',
-    'coordinates.y': 'coords.y',
-    'coordinates.z': 'coords.z',
-    'timestamp_fields': {
-        'timestamp': 'date',
-    },
-}
 
 
 class FormatEdsmJson(apache_beam.DoFn):
@@ -109,6 +48,18 @@ class FormatEdsmJson(apache_beam.DoFn):
         self.output_dict = {}
         self.schema_mappings = {
             'bodies': {},
+            'population': {
+                'planet_id': 'id64',
+                'security': 'security',
+                'allegiance': 'allegiance',
+                'economy': 'economy',
+                'government': 'government',
+                'population': 'population',
+                'state': 'state',
+                'timestamp_fields': {
+                    'updated': 'date',
+                },
+            },
             'powerplay': {
                 'system_id': 'id64',
                 'power.name': 'power',
@@ -118,6 +69,29 @@ class FormatEdsmJson(apache_beam.DoFn):
                 'state': 'state',
                 'timestamp_fields': {
                     'updated': 'date',
+                },
+            },
+            'stations': {
+                'id': 'id',
+                'system_id': 'systemId64',
+                'name': 'name',
+                'metadata.type': 'type',
+                'services.market': 'haveMarket',
+                'services.shipyard': 'haveShipyard',
+                'services.outfitting': 'haveOutfitting',
+                'metadata.distance': 'distanceToArrival',
+                'metadata.allegiance': 'allegiance',
+                'metadata.government': 'government',
+                'economy.id': 'marketId',
+                'economy.type': 'economy',
+                'economy.sub_type': 'secondEconomy',
+                'parent.id': 'body.id',
+                'parent.name': 'body.name',
+                'parent.latitude': 'body.latitude',
+                'parent.longitude': 'body.longitude',
+                'metadata.controlling_faction': 'controllingFaction.id',
+                'timestamp_fields': {
+                    'updated': 'updateTime.information',
                 },
             },
             'systems': {
@@ -194,12 +168,28 @@ def generate_ndjson_file(file_type: str, gcs_path: str):
 
 
 def gcs_fetch(file_type: str, url: str):
-    gcs_path = '%s/%s.gz' % (DATASET, file_type)
-    gcs_uri = gcs.get_gcs_uri(gcs_path)
-    logging.info('Downloading %s as %s', url, gcs_uri)
-    gcs_blob = gcs.fetch_url(gcs_path, url)
+    # Working GCS download
+    # logging.info('Downloading and decompressing %s...', url)
+    # file_blob = gcs.get_blob('%s/%s.gz' % (DATASET, file_type))
+    # gz_file_data = file_blob.download_as_bytes()
+    # decompressed_file = io.BytesIO(gzip.decompress(gz_file_data))
 
-    return gcs_blob
+    # gcs_path = '%s/%s.json' % (DATASET, file_type)
+    # logging.info('Uploading gs://%s...', gcs_path)
+    # return gcs.upload_file(decompressed_file, gcs_path)
+
+    # Working EDSM download
+    try:
+        logging.info('Downloading and decompressing %s...', url)
+        with urllib.request.urlopen(url) as http_file_response:
+            gz_file_data = io.BytesIO(http_file_response.read())
+            logging.info('Uploading %s.json to GCS...', file_type)
+            gcs_path = '%s/%s.json' % (DATASET, file_type)
+            return gcs.upload_file(gzip.open(gz_file_data), gcs_path)
+
+    except (urllib.error.URLError, urllib.error.HTTPError) as exception:
+        logging.error('Error fetching %s file: %s', url, exception)
+        return
 
 
 def main(argv):
@@ -219,8 +209,7 @@ def main(argv):
 
     else:
         logging.info('Fetching %s from EDSM...', FLAGS.file_type)
-        edsm_file_blob = gcs.get_blob('%s/%s.gz' % (DATASET, FLAGS.file_type))
-        # edsm_file_blob = gcs_fetch(FLAGS.file_type, URLS[FLAGS.file_type])
+        edsm_file_blob = gcs_fetch(FLAGS.file_type, URLS[FLAGS.file_type])
         gcs_files.append(edsm_file_blob)
 
         logging.info('Generating NDJSON file via DataFlow %s...',
@@ -233,7 +222,7 @@ def main(argv):
         bigquery_table = bigquery_loader(FLAGS.file_type, edsm_ndjson_blob)
 
     if FLAGS.cleanup_files:
-        gcs_deleted_files = [x.delete() for x in gcs_files]
+        [x.delete() for x in gcs_files]
 
     DOWNLOAD_POOL.shutdown()
     debug_end = time.time()
