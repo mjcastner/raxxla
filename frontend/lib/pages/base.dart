@@ -62,9 +62,9 @@ class NavDrawer extends StatelessWidget {
         ExpansionTile(
           title: Text('Galactic Census'),
           children: [
-            NavItem('Population', '/systems', 'images/population.png'),
-            NavItem('Factions', '/systems', 'images/factions.png'),
-            NavItem('Powers', '/systems', 'images/powers.png'),
+            NavItem('Population', '/population', 'images/population.png'),
+            NavItem('Factions', '/factions', 'images/factions.png'),
+            NavItem('Powers', '/powers', 'images/powers.png'),
           ],
         ),
         ExpansionTile(
@@ -76,8 +76,8 @@ class NavDrawer extends StatelessWidget {
         ExpansionTile(
           title: Text('Xenobiology'),
           children: [
-            NavItem('Guardians', '/systems', 'images/guardian.png'),
-            NavItem('Thargoids', '/systems', 'images/thargoid.png'),
+            NavItem('Guardians', '/guardians', 'images/guardian.png'),
+            NavItem('Thargoids', '/thargoids', 'images/thargoid.png'),
           ],
         ),
       ]),
