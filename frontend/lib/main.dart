@@ -1,70 +1,29 @@
 import 'package:flutter/material.dart';
-import 'package:raxxla/pages/base.dart';
 import 'package:raxxla/pages/planets.dart';
+import 'package:raxxla/pages/settlements.dart';
+import 'package:raxxla/pages/ships.dart';
+import 'package:raxxla/pages/stations.dart';
 import 'package:raxxla/pages/systems.dart';
 
 void main() {
-  runApp(MyApp());
+  runApp(RaxxlaApp());
 }
 
-class MyApp extends StatelessWidget {
-  // This widget is the root of your application.
+class RaxxlaApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       initialRoute: '/',
       routes: {
-        '/': (context) => MyHomePage(title: 'Current Location'),
-        '/systems': (context) => SystemsPage(),
+        '/': (context) => SystemsPage(),
         '/planets': (context) => PlanetsPage(),
+        '/settlements': (context) => SettlementsPage(),
+        '/ships': (context) => ShipsPage(),
+        '/stations': (context) => StationsPage(),
+        '/systems': (context) => SystemsPage(),
       },
       title: 'Universal Cartographics Database',
       theme: ThemeData.dark(),
-    );
-  }
-}
-
-class MyHomePage extends StatefulWidget {
-  MyHomePage({Key key, this.title}) : super(key: key);
-  final String title;
-
-  @override
-  _MyHomePageState createState() => _MyHomePageState();
-}
-
-class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
-
-  void _incrementCounter() {
-    setState(() {
-      _counter++;
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(),
-      drawer: NavDrawer(),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            Text(
-              'You have pushed the button this many times:',
-            ),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headline4,
-            ),
-          ],
-        ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: Icon(Icons.add),
-      ),
     );
   }
 }

@@ -51,12 +51,12 @@ class NavDrawer extends StatelessWidget {
           ),
         ),
         ExpansionTile(
-          title: Text('Codex'),
+          title: Text('Cartographic Database'),
           children: [
             NavItem('Systems', '/systems', 'images/system.png'),
             NavItem('Planets', '/planets', 'images/planet.png'),
-            NavItem('Settlements', '/systems', 'images/settlements.png'),
-            NavItem('Stations', '/systems', 'images/station.png'),
+            NavItem('Settlements', '/settlements', 'images/settlements.png'),
+            NavItem('Stations', '/stations', 'images/station.png'),
           ],
         ),
         ExpansionTile(
@@ -70,7 +70,7 @@ class NavDrawer extends StatelessWidget {
         ExpansionTile(
           title: Text('Technology'),
           children: [
-            NavItem('Ships', '/systems', 'images/ship.png'),
+            NavItem('Ships', '/ships', 'images/ship.png'),
           ],
         ),
         ExpansionTile(
