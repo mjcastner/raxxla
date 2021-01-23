@@ -224,12 +224,14 @@ def bigquery_loader(file_type: str, ndjson_file):
 def execute_beam_pipeline(file_type: str, gcs_path: str):
     with apache_beam.Pipeline(
             options=beam.get_default_pipeline_options()) as p:
-        pipeline_output = (p
-                           | apache_beam.io.ReadFromText(gcs_path)
-                           | apache_beam.ParDo(FormatEdsmJson(file_type))
-                           | apache_beam.io.WriteToText(
-                               'gs://%s/%s/%s_ndjson' %
-                               (FLAGS.gcs_bucket, DATASET, file_type)))
+        formatted_json_pcol = (p
+                               | apache_beam.io.ReadFromText(gcs_path)
+                               | apache_beam.ParDo(FormatEdsmJson(file_type)))
+
+        ndjson_gcs_output = (formatted_json_pcol
+                             | apache_beam.io.WriteToText(
+                                 'gs://%s/%s/%s_ndjson' %
+                                 (FLAGS.gcs_bucket, DATASET, file_type)))
 
 
 def gcs_fetch(file_type: str, url: str):
@@ -253,10 +255,10 @@ def main(argv):
     gcs_files = []
 
     def edsm_to_bigquery(file_type: str):
-        # logging.info('Fetching %s from EDSM...', file_type)
-        # edsm_file_blob = gcs_fetch(file_type, URLS[file_type])
-        # gcs_files.append(edsm_file_blob)
-        edsm_file_blob = gcs.get_blob('%s/%s.json' % (DATASET, file_type))
+        logging.info('Fetching %s from EDSM...', file_type)
+        edsm_file_blob = gcs_fetch(file_type, URLS[file_type])
+        gcs_files.append(edsm_file_blob)
+        # edsm_file_blob = gcs.get_blob('%s/%s.json' % (DATASET, file_type))
 
         logging.info('Generating NDJSON file via DataFlow %s...',
                      FLAGS.beam_runner)

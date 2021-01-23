@@ -1,11 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:raxxla/pages/base.dart';
 import 'package:animated_text_kit/animated_text_kit.dart';
+import 'package:google_fonts/google_fonts.dart';
 
-final ships = <String, String>{
-  'Adder': 'adder',
-  'Cobra Mk.III': 'cobra_mk_3',
-  'Cobra Mk.IV': 'cobra_mk_4',
+final ships = <String, Map>{
+  'Adder': {
+    'name': 'adder',
+    'description':
+        'A compact, adaptable ship, the Adder has a larger cargo hold than other ships of similar size, and its base jump range of over 30 light years makes it a viable choice for explorers. The ship can also hold its own in a dogfight, when properly outfitted.',
+  },
+  'Cobra Mk.III': {
+    'name': 'cobra_mk_3',
+  },
+  'Cobra Mk.IV': {
+    'name': 'cobra_mk_4',
+  },
 };
 
 class Ship {
@@ -15,13 +24,15 @@ class Ship {
   String image;
 
   Ship(String name) {
-    this.name = ships[name];
-    this.image = 'images/ships/${ships[name]}.png';
+    var shipData = ships[name];
+    this.name = shipData['name'];
+    this.image = 'images/ships/${shipData['name']}.png';
 
     switch (this.name) {
       case "adder":
         {
           this.manufacturer = 'zorgon_peterson';
+          this.description = shipData['description'];
         }
         break;
 
@@ -123,13 +134,14 @@ class _ShipDetailState extends State<ShipDetails> {
               ],
             ),
             Container(
+              margin: EdgeInsets.zero,
               child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
-                  TypewriterAnimatedTextKit(
-                    speed: Duration(milliseconds: 100),
-                    isRepeatingAnimation: false,
-                    text: ["ROCK ME AMADEUS\nROCK ME ALL NIGHT LONG"],
-                    textStyle: TextStyle(fontSize: 24.0),
+                  Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [],
                   ),
                 ],
               ),
@@ -138,9 +150,10 @@ class _ShipDetailState extends State<ShipDetails> {
             ),
           ],
         ),
+        margin: EdgeInsets.all(10),
         decoration: BoxDecoration(
           image: DecorationImage(
-            fit: BoxFit.fitHeight,
+            fit: BoxFit.fitWidth,
             image: AssetImage(selectedShip.image),
           ),
         ),

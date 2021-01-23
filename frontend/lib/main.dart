@@ -10,6 +10,9 @@ import 'package:raxxla/pages/stations.dart';
 import 'package:raxxla/pages/systems.dart';
 import 'package:raxxla/pages/thargoids.dart';
 
+// Add a live map page using gRPC streams
+// ZeroMQ source: https://github.com/EDCD/EDDN/wiki
+
 void main() {
   runApp(RaxxlaApp());
 }
