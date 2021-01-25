@@ -1,0 +1,26 @@
+syntax = "proto3";
+
+import "bodies.proto";
+import "society.proto";
+
+service Raxxla {
+  rpc ConvertPlanetJson (ConvertEdsmRequest) returns (ConvertPlanetReply) {}
+  rpc ConvertPowerplayJson (ConvertEdsmRequest) returns (ConvertPowerplayReply) {}
+  rpc ConvertStarJson (ConvertEdsmRequest) returns (ConvertStarReply) {}
+}
+
+message ConvertEdsmRequest {
+  string json = 1;
+}
+
+message ConvertPlanetReply {
+  Planet message = 1;
+}
+
+message ConvertPowerplayReply {
+    Powerplay message = 1;
+}
+
+message ConvertStarReply {
+  Star message = 1;
+}
