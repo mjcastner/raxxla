@@ -1,6 +1,8 @@
 from datetime import datetime
 import functools
 
+import bodies_pb2
+
 
 def recursive_class_get(obj, attr, *args):
     def _getattr(obj, attr):
@@ -26,16 +28,74 @@ def recursive_dict_set(input_dict, path, value):
 
 
 def map_proto_fields(proto_obj, schema_mapping, input_dict):
-    for k, v in schema_mapping.items():
-        if k == 'timestamp_fields':
-            for ts_k, ts_v in v.items():
-                int_ts = int(
-                    datetime.strptime(recursive_dict_get(input_dict, ts_v),
-                                      '%Y-%m-%d %H:%M:%S').timestamp())
+    def _format_composition(input_composition: dict):
+        output_composition = []
+        if input_composition:
+            for element, percentage in input_composition.items():
+                composition = bodies_pb2.Composition()
+                composition.type = element
+                composition.percentage = percentage
+                output_composition.append(composition)
+
+        return output_composition
+
+    def _format_parents(input_parents: list):
+        output_parents = []
+        if input_parents:
+            for input_parent in input_parents:
+                for parent_type, parent_relative_id in input_parent.items():
+                    if parent_type and parent_relative_id:
+                        parent = bodies_pb2.Parent()
+                        parent.type = parent_type
+                        parent.relative_id = parent_relative_id
+                        output_parents.append(parent)
+
+        return output_parents
+
+    def _format_ringlike(input_rings: list):
+        output_rings = []
+        if input_rings:
+            for input_ring in input_rings:
+                ring = bodies_pb2.Ringlike()
+                ring.name = input_ring.get('name')
+                ring.type = input_ring.get('type')
+                ring.mass = input_ring.get('mass')
+                ring.inner_radius = input_ring.get('innerRadius')
+                ring.outer_radius = input_ring.get('outerRadius')
+                output_rings.append(ring)
+
+        return output_rings
+
+    def _process_timestamp(raw_timestamp):
+        return int(
+            datetime.strptime(raw_timestamp, '%Y-%m-%d %H:%M:%S').timestamp())
+
+    for field, value in schema_mapping.items():
+        if field == 'timestamp_fields':
+            for ts_k, ts_v in value.items():
+                int_ts = _process_timestamp(
+                    recursive_dict_get(input_dict, ts_v))
                 recursive_class_set(proto_obj, ts_k, int_ts)
-        elif k == 'repeated_fields':
-            pass
+        elif field == 'repeated_fields':
+            for rf_field, rf_dict in value.items():
+                rf_key = rf_dict.get('key')
+                rf_type = rf_dict.get('type')
+                if rf_type == 'composition':
+                    composition_data = _format_composition(
+                        recursive_dict_get(input_dict, rf_key))
+                    proto_field = recursive_class_get(proto_obj, rf_field)
+                    proto_field.extend(composition_data)
+                elif rf_type == 'ringlike':
+                    ringlike_data = _format_ringlike(
+                        recursive_dict_get(input_dict, rf_key))
+                    proto_field = recursive_class_get(proto_obj, rf_field)
+                    proto_field.extend(ringlike_data)
+                elif rf_type == 'parents':
+                    parent_data = _format_parents(
+                        recursive_dict_get(input_dict, rf_key))
+                    proto_field = recursive_class_get(proto_obj, rf_field)
+                    proto_field.extend(parent_data)
         else:
-            dict_value = recursive_dict_get(input_dict, v)
+            dict_value = recursive_dict_get(input_dict, value)
             if dict_value:
-                recursive_class_set(proto_obj, k, dict_value)
+                recursive_class_set(proto_obj, field, dict_value)

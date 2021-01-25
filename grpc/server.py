@@ -21,6 +21,7 @@ class Raxxla(api_raxxla_pb2_grpc.RaxxlaServicer):
             'system_id': 'systemId64',
             'relative_id': 'bodyId',
             'name': 'name',
+            'atmosphere.type': 'atmosphereType',
             'metadata.type': 'subType',
             'metadata.distance': 'distanceToArrival',
             'metadata.mass': 'earthMasses',
@@ -31,7 +32,43 @@ class Raxxla(api_raxxla_pb2_grpc.RaxxlaServicer):
             'metadata.pressure': 'surfacePressure',
             'metadata.volcanism': 'volcanismType',
             'metadata.terraforming': 'terraformingState',
-            'atmosphere.type': 'atmosphereType',
+            'orbit.period': 'orbitalPeriod',
+            'orbit.rotational_period': 'rotationalPeriod',
+            'orbit.tidally_locked': 'rotationalPeriodTidallyLocked',
+            'orbit.periapsis': 'argOfPeriapsis',
+            'orbit.eccentricity': 'orbitalEccentricity',
+            'orbit.inclination': 'orbitalInclination',
+            'orbit.semimajor_axis': 'semiMajorAxis',
+            'orbit.axial_tilt': 'axialTilt',
+            'repeated_fields': {
+                'atmosphere.composition': {
+                    'key': 'atmosphereComposition',
+                    'type': 'composition',
+                },
+                'belts': {
+                    'key': 'belts',
+                    'type': 'ringlike',
+                },
+                'composition': {
+                    'key': 'solidComposition',
+                    'type': 'composition',
+                },
+                'materials': {
+                    'key': 'materials',
+                    'type': 'composition',
+                },
+                'parents': {
+                    'key': 'parents',
+                    'type': 'parents',
+                },
+                'rings': {
+                    'key': 'rings',
+                    'type': 'ringlike',
+                },
+            },
+            'timestamp_fields': {
+                'updated': 'updateTime',
+            },
         }
         edsm_dict = json.loads(request.json)
         pprint(edsm_dict)
@@ -60,6 +97,53 @@ class Raxxla(api_raxxla_pb2_grpc.RaxxlaServicer):
 
         return api_raxxla_pb2.ConvertPowerplayReply(message=powerplay)
 
+    def ConvertStarJson(self, request, context):
+        print('Server received:\n')
+        schema_mapping = {
+            'id': 'id64',
+            'system_id': 'systemId64',
+            'relative_id': 'bodyId',
+            'name': 'name',
+            'metadata.type': 'subType',
+            'metadata.distance': 'distanceToArrival',
+            'metadata.reserve_level': 'reserveLevel',
+            'metadata.spectral_class': 'spectralClass',
+            'metadata.solar_masses': 'solarMasses',
+            'metadata.solar_radius': 'solarRadius',
+            'metadata.luminosity': 'luminosity',
+            'metadata.temperature': 'surfaceTemperature',
+            'orbit.period': 'orbitalPeriod',
+            'orbit.rotational_period': 'rotationalPeriod',
+            'orbit.tidally_locked': 'rotationalPeriodTidallyLocked',
+            'orbit.periapsis': 'argOfPeriapsis',
+            'orbit.eccentricity': 'orbitalEccentricity',
+            'orbit.inclination': 'orbitalInclination',
+            'orbit.semimajor_axis': 'semiMajorAxis',
+            'orbit.axial_tilt': 'axialTilt',
+            'repeated_fields': {
+                'belts': {
+                    'key': 'belts',
+                    'type': 'ringlike',
+                },
+                'parents': {
+                    'key': 'parents',
+                    'type': 'parents',
+                },
+                'rings': {
+                    'key': 'rings',
+                    'type': 'ringlike',
+                },
+            },
+            'timestamp_fields': {
+                'updated': 'updateTime',
+            },
+        }
+        edsm_dict = json.loads(request.json)
+        pprint(edsm_dict)
+        star = bodies_pb2.Star()
+        utils.map_proto_fields(star, schema_mapping, edsm_dict)
+
+        return api_raxxla_pb2.ConvertStarReply(message=star)
 
 def serve():
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
