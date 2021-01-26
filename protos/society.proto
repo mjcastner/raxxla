@@ -18,7 +18,7 @@ message Faction {
 }
 
 message Population {
-  int64 planet_id = 1;
+  int64 system_id = 1;
   string allegiance = 2;
   string government = 3;
   string state = 4;

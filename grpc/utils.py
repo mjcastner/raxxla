@@ -1,7 +1,21 @@
 from datetime import datetime
 import functools
+import re
 
 import bodies_pb2
+
+PART_NAME_RE = re.compile(r'[0-9]{1}[A-Z]{1}.{1}(.*)')
+PART_QUALITY_RE = re.compile(r'[0-9]{1}[A-Z]{1}')
+
+
+def extract_quality(input_string: str):
+    name_match = re.search(PART_NAME_RE, input_string)
+    quality_match = re.search(PART_QUALITY_RE, input_string)
+
+    return {
+        'name': name_match.group(1),
+        'quality': quality_match.group(0),
+    }
 
 
 def recursive_class_get(obj, attr, *args):

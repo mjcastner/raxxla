@@ -1,5 +1,18 @@
 syntax = "proto3";
 
+message Commodity {
+  string name = 1;
+  int64 buy_price = 2;
+  int64 sell_price = 3;
+  int64 stock = 4;
+  int64 demand = 5;
+}
+
+message ShipPart {
+  string name = 1;
+  string quality = 2;
+}
+
 message Settlement {
   message Economy {
     int64 id = 1;
@@ -27,6 +40,9 @@ message Settlement {
     bool shipyard = 2;
     bool outfitting = 3;
     repeated string other = 4;
+    repeated Commodity commodities = 5;
+    repeated ShipPart ship_parts = 6;
+    repeated string ships = 7;
   }
 
   int64 id = 1;
