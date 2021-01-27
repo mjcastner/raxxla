@@ -275,7 +275,7 @@ class Raxxla(api_raxxla_pb2_grpc.RaxxlaServicer):
 def serve():
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
     api_raxxla_pb2_grpc.add_RaxxlaServicer_to_server(Raxxla(), server)
-    server.add_insecure_port('[::]:50051')
+    server.add_insecure_port('0.0.0.0:50051')
     server.start()
     server.wait_for_termination()
 
