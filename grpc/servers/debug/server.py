@@ -17,6 +17,7 @@ import system_pb2
 
 class Raxxla(api_raxxla_pb2_grpc.RaxxlaServicer):
     def ConvertPlanetJson(self, request, context):
+        logging.info('Received request: %s', request)
         schema_mapping = {
             'id': 'id64',
             'system_id': 'systemId64',
@@ -75,9 +76,10 @@ class Raxxla(api_raxxla_pb2_grpc.RaxxlaServicer):
         planet = bodies_pb2.Planet()
         utils.map_proto_fields(planet, schema_mapping, edsm_dict)
 
-        return api_raxxla_pb2.ConvertPlanetReply(message=planet)
+        return planet
 
     def ConvertPopulationJson(self, request, context):
+        logging.info('Received request: %s', request)
         schema_mapping = {
             'system_id': 'id64',
             'allegiance': 'allegiance',
@@ -132,9 +134,10 @@ class Raxxla(api_raxxla_pb2_grpc.RaxxlaServicer):
                     faction.states.add(type=x.get('type'), name=x.get('name'))
                     for x in states
                 ]
-        return api_raxxla_pb2.ConvertPopulationReply(message=population)
+        return population
 
     def ConvertPowerplayJson(self, request, context):
+        logging.info('Received request: %s', request)
         schema_mapping = {
             'system_id': 'id64',
             'power.name': 'power',
@@ -150,9 +153,10 @@ class Raxxla(api_raxxla_pb2_grpc.RaxxlaServicer):
         powerplay = society_pb2.Powerplay()
         utils.map_proto_fields(powerplay, schema_mapping, edsm_dict)
 
-        return api_raxxla_pb2.ConvertPowerplayReply(message=powerplay)
+        return powerplay
 
     def ConvertStationJson(self, request, context):
+        logging.info('Received request: %s', request)
         schema_mapping = {
             'id': 'id',
             'system_id': 'systemId64',
@@ -206,9 +210,10 @@ class Raxxla(api_raxxla_pb2_grpc.RaxxlaServicer):
         if ships_edsm:
             [station.services.ships.append(x.get('name')) for x in ships_edsm]
 
-        return api_raxxla_pb2.ConvertStationReply(message=station)
+        return station
 
     def ConvertStarJson(self, request, context):
+        logging.info('Received request: %s', request)
         schema_mapping = {
             'id': 'id64',
             'system_id': 'systemId64',
@@ -252,9 +257,10 @@ class Raxxla(api_raxxla_pb2_grpc.RaxxlaServicer):
         star = bodies_pb2.Star()
         utils.map_proto_fields(star, schema_mapping, edsm_dict)
 
-        return api_raxxla_pb2.ConvertStarReply(message=star)
+        return star
 
     def ConvertSystemJson(self, request, context):
+        logging.info('Received request: %s', request)
         schema_mapping = {
             'id': 'id64',
             'name': 'name',
@@ -269,10 +275,11 @@ class Raxxla(api_raxxla_pb2_grpc.RaxxlaServicer):
         system = system_pb2.System()
         utils.map_proto_fields(system, schema_mapping, edsm_dict)
 
-        return api_raxxla_pb2.ConvertSystemReply(message=system)
+        return system
 
 
 def serve():
+    logging.info('Starting Raxxla debug gRPC server...')
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
     api_raxxla_pb2_grpc.add_RaxxlaServicer_to_server(Raxxla(), server)
     server.add_insecure_port('0.0.0.0:50051')

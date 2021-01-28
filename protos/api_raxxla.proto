@@ -7,38 +7,24 @@ import "society.proto";
 import "system.proto";
 
 service Raxxla {
-  rpc ConvertPlanetJson (ConvertEdsmRequest) returns (ConvertPlanetReply) {}
-  rpc ConvertPopulationJson (ConvertEdsmRequest) returns (ConvertPopulationReply) {}
-  rpc ConvertPowerplayJson (ConvertEdsmRequest) returns (ConvertPowerplayReply) {}
-  rpc ConvertStarJson (ConvertEdsmRequest) returns (ConvertStarReply) {}
-  rpc ConvertStationJson (ConvertEdsmRequest) returns (ConvertStationReply) {}
-  rpc ConvertSystemJson (ConvertEdsmRequest) returns (ConvertSystemReply) {}
+  // Datastore methods
+  rpc GetPowerplay (IdRequest) returns (Powerplay) {}
+  rpc SetPowerplay (IdRequest) returns (Powerplay) {}
+
+
+  // Conversion methods
+  rpc ConvertPlanetJson (EdsmRequest) returns (Planet) {}
+  rpc ConvertPopulationJson (EdsmRequest) returns (Population) {}
+  rpc ConvertPowerplayJson (EdsmRequest) returns (Powerplay) {}
+  rpc ConvertStarJson (EdsmRequest) returns (Star) {}
+  rpc ConvertStationJson (EdsmRequest) returns (Settlement) {}
+  rpc ConvertSystemJson (EdsmRequest) returns (System) {}
 }
 
-message ConvertEdsmRequest {
+message IdRequest {
+  int64 id = 1;
+}
+
+message EdsmRequest {
   string json = 1;
-}
-
-message ConvertPlanetReply {
-  Planet message = 1;
-}
-
-message ConvertPopulationReply {
-  Population message = 1;
-}
-
-message ConvertPowerplayReply {
-    Powerplay message = 1;
-}
-
-message ConvertStarReply {
-  Star message = 1;
-}
-
-message ConvertStationReply {
-  Settlement message = 1;
-}
-
-message ConvertSystemReply {
-  System message = 1;
 }

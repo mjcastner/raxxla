@@ -18,22 +18,22 @@ def run():
         stub = api_raxxla_pb2_grpc.RaxxlaStub(channel)
 
         # Test calls
-        # planet_response = stub.ConvertPlanetJson(api_raxxla_pb2.ConvertEdsmRequest(json=PLANET_JSON))
+        # planet_response = stub.ConvertPlanetJson(api_raxxla_pb2.EdsmRequest(json=PLANET_JSON))
         # responses.append(planet_response)
 
-        powerplay_response = stub.ConvertPowerplayJson(api_raxxla_pb2.ConvertEdsmRequest(json=POWERPLAY_JSON))
+        powerplay_response = stub.ConvertPowerplayJson(api_raxxla_pb2.EdsmRequest(json=POWERPLAY_JSON))
         responses.append(powerplay_response)
 
-        star_response = stub.ConvertStarJson(api_raxxla_pb2.ConvertEdsmRequest(json=STAR_JSON))
+        star_response = stub.ConvertStarJson(api_raxxla_pb2.EdsmRequest(json=STAR_JSON))
         responses.append(star_response)
 
-        system_response = stub.ConvertSystemJson(api_raxxla_pb2.ConvertEdsmRequest(json=POPULATION_JSON))
+        system_response = stub.ConvertSystemJson(api_raxxla_pb2.EdsmRequest(json=POPULATION_JSON))
         responses.append(system_response)
 
-        station_response = stub.ConvertStationJson(api_raxxla_pb2.ConvertEdsmRequest(json=STATION_JSON))
+        station_response = stub.ConvertStationJson(api_raxxla_pb2.EdsmRequest(json=STATION_JSON))
         responses.append(station_response)
 
-        population_response = stub.ConvertPopulationJson(api_raxxla_pb2.ConvertEdsmRequest(json=POPULATION_JSON))
+        population_response = stub.ConvertPopulationJson(api_raxxla_pb2.EdsmRequest(json=POPULATION_JSON))
         responses.append(population_response)
 
     [print(x) for x in responses]
