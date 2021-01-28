@@ -1,3 +1,0 @@
-[submodule "backend/app/commonlib"]
-	path = backend/app/commonlib
-	url = git@github.com:mjcastner/commonlib.git

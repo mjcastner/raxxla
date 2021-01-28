@@ -6,4 +6,4 @@ WORKDIR /app
 RUN pip install -r requirements.txt \
     && python -m grpc_tools.protoc -I . --python_out=. --grpc_python_out=. *.proto
 EXPOSE 50051
-CMD ["python", "server.py"]
+ENTRYPOINT ["python"]

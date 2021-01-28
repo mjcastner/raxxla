@@ -1,18 +1,24 @@
+import json
 from concurrent import futures
 from datetime import datetime
 from pprint import pprint
-import json
-import logging
-import utils
-
-import grpc
 
 import api_raxxla_pb2
 import api_raxxla_pb2_grpc
 import bodies_pb2
+import grpc
 import settlement_pb2
 import society_pb2
 import system_pb2
+
+from absl import app, flags, logging
+
+import utils
+
+
+FLAGS = flags.FLAGS
+flags.DEFINE_string('server_host', '0.0.0.0', 'Address to host Raxxla debug gRPC server.')
+flags.DEFINE_string('server_port', '50051', 'Port for Raxxla debug gRPC server.')
 
 
 class Raxxla(api_raxxla_pb2_grpc.RaxxlaServicer):
@@ -278,15 +284,16 @@ class Raxxla(api_raxxla_pb2_grpc.RaxxlaServicer):
         return system
 
 
-def serve():
-    logging.info('Starting Raxxla debug gRPC server...')
+def main(argv):
+    del argv
+
+    logging.info('Starting Raxxla debug gRPC server at %s:%s...', FLAGS.server_host, FLAGS.server_port)
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
     api_raxxla_pb2_grpc.add_RaxxlaServicer_to_server(Raxxla(), server)
-    server.add_insecure_port('0.0.0.0:50051')
+    server.add_insecure_port('%s:%s' % (FLAGS.server_host, FLAGS.server_port))
     server.start()
     server.wait_for_termination()
 
 
 if __name__ == '__main__':
-    logging.basicConfig()
-    serve()
+    app.run(main)
