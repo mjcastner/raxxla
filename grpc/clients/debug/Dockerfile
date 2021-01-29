@@ -1,4 +1,4 @@
-FROM python:3.7-buster
+FROM python:3.9-buster
 ADD ./grpc/clients/debug /app
 ADD ./protos /app
 ADD ./requirements.txt /app

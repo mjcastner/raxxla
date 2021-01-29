@@ -10,15 +10,16 @@ import grpc
 import settlement_pb2
 import society_pb2
 import system_pb2
-
 from absl import app, flags, logging
+from commonlib.google.datastore import datastore
 
 import utils
 
-
 FLAGS = flags.FLAGS
-flags.DEFINE_string('server_host', '0.0.0.0', 'Address to host Raxxla debug gRPC server.')
-flags.DEFINE_string('server_port', '50051', 'Port for Raxxla debug gRPC server.')
+flags.DEFINE_string('server_host', '0.0.0.0',
+                    'Address to host Raxxla debug gRPC server.')
+flags.DEFINE_string('server_port', '50051',
+                    'Port for Raxxla debug gRPC server.')
 
 
 class Raxxla(api_raxxla_pb2_grpc.RaxxlaServicer):
@@ -283,11 +284,122 @@ class Raxxla(api_raxxla_pb2_grpc.RaxxlaServicer):
 
         return system
 
+    def GetPopulation(self, request, context):
+        logging.info('Received request: %s', request)
+        ds_client = datastore.create_client()
+        population = society_pb2.Population()
+        proto_bytes = datastore.get_proto_bytes(ds_client, 'population', request.id)
+        population.ParseFromString(proto_bytes)
+        return population
+
+    def SetPopulation(self, request, context):
+        logging.info('Received request: %s', request)
+        ds_client = datastore.create_client()
+        response = api_raxxla_pb2.SetResponse()
+        try:
+            datastore.set_proto_bytes(ds_client, 'population', request.id,
+                                      request.population.SerializeToString())
+            response.code = 1
+            return response
+        except Exception as e:
+            logging.error(e)
+            response.code = 0
+            return response
+
+    def GetPowerplay(self, request, context):
+        logging.info('Received request: %s', request)
+        ds_client = datastore.create_client()
+        powerplay = society_pb2.Powerplay()
+        proto_bytes = datastore.get_proto_bytes(ds_client, 'powerplay', request.id)
+        powerplay.ParseFromString(proto_bytes)
+        return powerplay
+
+    def SetPowerplay(self, request, context):
+        logging.info('Received request: %s', request)
+        ds_client = datastore.create_client()
+        response = api_raxxla_pb2.SetResponse()
+        try:
+            datastore.set_proto_bytes(ds_client, 'powerplay', request.id,
+                                      request.powerplay.SerializeToString())
+            response.code = 1
+            return response
+        except Exception as e:
+            logging.error(e)
+            response.code = 0
+            return response
+
+    def GetStar(self, request, context):
+        logging.info('Received request: %s', request)
+        ds_client = datastore.create_client()
+        star = bodies_pb2.Star()
+        proto_bytes = datastore.get_proto_bytes(ds_client, 'star', request.id)
+        star.ParseFromString(proto_bytes)
+        return star
+
+    def SetStar(self, request, context):
+        logging.info('Received request: %s', request)
+        ds_client = datastore.create_client()
+        response = api_raxxla_pb2.SetResponse()
+        try:
+            datastore.set_proto_bytes(ds_client, 'star', request.id,
+                                      request.star.SerializeToString())
+            response.code = 1
+            return response
+        except Exception as e:
+            logging.error(e)
+            response.code = 0
+            return response
+
+    def GetSettlement(self, request, context):
+        logging.info('Received request: %s', request)
+        ds_client = datastore.create_client()
+        settlement = settlement_pb2.Settlement()
+        proto_bytes = datastore.get_proto_bytes(ds_client, 'settlement', request.id)
+        settlement.ParseFromString(proto_bytes)
+        return settlement
+
+    def SetSettlement(self, request, context):
+        logging.info('Received request: %s', request)
+        ds_client = datastore.create_client()
+        response = api_raxxla_pb2.SetResponse()
+        try:
+            datastore.set_proto_bytes(ds_client, 'settlement', request.id,
+                                      request.settlement.SerializeToString())
+            response.code = 1
+            return response
+        except Exception as e:
+            logging.error(e)
+            response.code = 0
+            return response
+    
+    def GetSystem(self, request, context):
+        logging.info('Received request: %s', request)
+        ds_client = datastore.create_client()
+        system = system_pb2.System()
+        proto_bytes = datastore.get_proto_bytes(ds_client, 'system', request.id)
+        system.ParseFromString(proto_bytes)
+        return system
+
+    def SetSystem(self, request, context):
+        logging.info('Received request: %s', request)
+        ds_client = datastore.create_client()
+        response = api_raxxla_pb2.SetResponse()
+        try:
+            datastore.set_proto_bytes(ds_client, 'system', request.id,
+                                      request.system.SerializeToString())
+            response.code = 1
+            return response
+        except Exception as e:
+            logging.error(e)
+            response.code = 0
+            return response
+
 
 def main(argv):
     del argv
 
-    logging.info('Starting Raxxla debug gRPC server at %s:%s...', FLAGS.server_host, FLAGS.server_port)
+    logging.info('Starting Raxxla debug gRPC server at %s:%s...',
+                 FLAGS.server_host, FLAGS.server_port)
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
     api_raxxla_pb2_grpc.add_RaxxlaServicer_to_server(Raxxla(), server)
     server.add_insecure_port('%s:%s' % (FLAGS.server_host, FLAGS.server_port))

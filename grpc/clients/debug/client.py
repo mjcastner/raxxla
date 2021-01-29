@@ -5,8 +5,10 @@ import grpc
 from absl import app, flags, logging
 
 FLAGS = flags.FLAGS
-flags.DEFINE_string('server_host', '172.17.0.2', 'Host for Raxxla debug gRPC server.')
-flags.DEFINE_string('server_port', '50051', 'Port for Raxxla debug gRPC server.')
+flags.DEFINE_string('server_host', '172.17.0.2',
+                    'Host for Raxxla debug gRPC server.')
+flags.DEFINE_string('server_port', '50051',
+                    'Port for Raxxla debug gRPC server.')
 
 # Example JSON data
 POWERPLAY_JSON = '''{"power":"Edmund Mahon","powerState":"Exploited","id":15453,"id64":6406111564522,"name":"Kitchosat","coords":{"x":21.90625,"y":64.8125,"z":107.625},"allegiance":"Independent","government":"Corporate","state":"None","date":"2020-12-24 04:17:51"}'''
@@ -20,36 +22,76 @@ def main(argv):
 
     # This client will assume that the corresponding gRPC server is running in a
     # Docker container, and use the default network bridge address to communicate.
-    responses = []
-    with grpc.insecure_channel('%s:%s' % (FLAGS.server_host, FLAGS.server_port)) as channel:
-        logging.info('Connecting to gRPC debug server at %s:%s', FLAGS.server_host, FLAGS.server_port)
+    with grpc.insecure_channel(
+            '%s:%s' % (FLAGS.server_host, FLAGS.server_port)) as channel:
+        logging.info('Connecting to gRPC debug server at %s:%s',
+                     FLAGS.server_host, FLAGS.server_port)
         stub = api_raxxla_pb2_grpc.RaxxlaStub(channel)
 
         # Test calls
         # planet_response = stub.ConvertPlanetJson(api_raxxla_pb2.EdsmRequest(json=PLANET_JSON))
         # responses.append(planet_response)
 
-        powerplay_response = stub.ConvertPowerplayJson(
+        # Population
+        population = stub.ConvertPopulationJson(
+            api_raxxla_pb2.EdsmRequest(json=POPULATION_JSON))
+        population_set_response = stub.SetPopulation(
+            api_raxxla_pb2.PopulationRequest(
+                id=population.system_id,
+                population=population,
+            ))
+        population_proto = stub.GetPopulation(
+            api_raxxla_pb2.GetRequest(id=population.system_id))
+        logging.info(population_proto)
+
+        # Powerplay
+        powerplay = stub.ConvertPowerplayJson(
             api_raxxla_pb2.EdsmRequest(json=POWERPLAY_JSON))
-        responses.append(powerplay_response)
+        powerplay_set_response = stub.SetPowerplay(
+            api_raxxla_pb2.PowerplayRequest(
+                id=powerplay.system_id,
+                powerplay=powerplay,
+            ))
+        powerplay_proto = stub.GetPowerplay(
+            api_raxxla_pb2.GetRequest(id=powerplay.system_id))
+        logging.info(powerplay_proto)
 
-        star_response = stub.ConvertStarJson(
-            api_raxxla_pb2.EdsmRequest(json=STAR_JSON))
-        responses.append(star_response)
+        # Star
+        star = stub.ConvertStarJson(api_raxxla_pb2.EdsmRequest(json=STAR_JSON))
+        star_set_response = stub.SetStar(
+            api_raxxla_pb2.StarRequest(
+                id=star.id,
+                star=star,
+            ))
+        star_proto = stub.GetStar(api_raxxla_pb2.GetRequest(id=star.id))
+        logging.info(star_proto)
 
-        system_response = stub.ConvertSystemJson(
-            api_raxxla_pb2.EdsmRequest(json=POPULATION_JSON))
-        responses.append(system_response)
-
-        station_response = stub.ConvertStationJson(
+        # Settlement
+        settlement = stub.ConvertStationJson(
             api_raxxla_pb2.EdsmRequest(json=STATION_JSON))
-        responses.append(station_response)
+        settlement_set_response = stub.SetSettlement(
+            api_raxxla_pb2.SettlementRequest(
+                id=settlement.id,
+                settlement=settlement,
+            ))
+        settlement_proto = stub.GetSettlement(
+            api_raxxla_pb2.GetRequest(id=settlement.id))
+        logging.info(settlement_proto)
 
-        population_response = stub.ConvertPopulationJson(
+        # System
+        system = stub.ConvertSystemJson(
             api_raxxla_pb2.EdsmRequest(json=POPULATION_JSON))
-        responses.append(population_response)
+        system_set_response = stub.SetSystem(
+            api_raxxla_pb2.SystemRequest(
+                id=system.id,
+                system=system,
+            ))
+        system_proto = stub.GetSystem(
+            api_raxxla_pb2.GetRequest(id=system.id))
+        logging.info(system_proto)
 
-    [logging.info('Received response: %s', x) for x in responses]
+        # population_response = stub.ConvertPopulationJson(
+        #     api_raxxla_pb2.EdsmRequest(json=POPULATION_JSON))
 
 
 if __name__ == '__main__':
