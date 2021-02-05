@@ -1,4 +1,5 @@
 import json
+import os
 from concurrent import futures
 from datetime import datetime
 from pprint import pprint
@@ -14,12 +15,6 @@ from absl import app, flags, logging
 from commonlib.google.datastore import datastore
 
 import utils
-
-FLAGS = flags.FLAGS
-flags.DEFINE_string('server_host', '0.0.0.0',
-                    'Address to host Raxxla debug gRPC server.')
-flags.DEFINE_string('server_port', '50051',
-                    'Port for Raxxla debug gRPC server.')
 
 
 class Raxxla(api_raxxla_pb2_grpc.RaxxlaServicer):
@@ -284,11 +279,35 @@ class Raxxla(api_raxxla_pb2_grpc.RaxxlaServicer):
 
         return system
 
+    def GetPlanet(self, request, context):
+        logging.info('Received request: %s', request)
+        ds_client = datastore.create_client()
+        planet = bodies_pb2.Planet()
+        proto_bytes = datastore.get_proto_bytes(ds_client, 'planet',
+                                                request.id)
+        planet.ParseFromString(proto_bytes)
+        return planet
+
+    def SetPlanet(self, request, context):
+        logging.info('Received request: %s', request)
+        ds_client = datastore.create_client()
+        response = api_raxxla_pb2.SetResponse()
+        try:
+            datastore.set_proto_bytes(ds_client, 'planet', request.id,
+                                      request.planet.SerializeToString())
+            response.code = 1
+            return response
+        except Exception as e:
+            logging.error(e)
+            response.code = 0
+            return response
+
     def GetPopulation(self, request, context):
         logging.info('Received request: %s', request)
         ds_client = datastore.create_client()
         population = society_pb2.Population()
-        proto_bytes = datastore.get_proto_bytes(ds_client, 'population', request.id)
+        proto_bytes = datastore.get_proto_bytes(ds_client, 'population',
+                                                request.id)
         population.ParseFromString(proto_bytes)
         return population
 
@@ -310,7 +329,8 @@ class Raxxla(api_raxxla_pb2_grpc.RaxxlaServicer):
         logging.info('Received request: %s', request)
         ds_client = datastore.create_client()
         powerplay = society_pb2.Powerplay()
-        proto_bytes = datastore.get_proto_bytes(ds_client, 'powerplay', request.id)
+        proto_bytes = datastore.get_proto_bytes(ds_client, 'powerplay',
+                                                request.id)
         powerplay.ParseFromString(proto_bytes)
         return powerplay
 
@@ -354,7 +374,8 @@ class Raxxla(api_raxxla_pb2_grpc.RaxxlaServicer):
         logging.info('Received request: %s', request)
         ds_client = datastore.create_client()
         settlement = settlement_pb2.Settlement()
-        proto_bytes = datastore.get_proto_bytes(ds_client, 'settlement', request.id)
+        proto_bytes = datastore.get_proto_bytes(ds_client, 'settlement',
+                                                request.id)
         settlement.ParseFromString(proto_bytes)
         return settlement
 
@@ -371,12 +392,13 @@ class Raxxla(api_raxxla_pb2_grpc.RaxxlaServicer):
             logging.error(e)
             response.code = 0
             return response
-    
+
     def GetSystem(self, request, context):
         logging.info('Received request: %s', request)
         ds_client = datastore.create_client()
         system = system_pb2.System()
-        proto_bytes = datastore.get_proto_bytes(ds_client, 'system', request.id)
+        proto_bytes = datastore.get_proto_bytes(ds_client, 'system',
+                                                request.id)
         system.ParseFromString(proto_bytes)
         return system
 
@@ -398,11 +420,14 @@ class Raxxla(api_raxxla_pb2_grpc.RaxxlaServicer):
 def main(argv):
     del argv
 
-    logging.info('Starting Raxxla debug gRPC server at %s:%s...',
-                 FLAGS.server_host, FLAGS.server_port)
+    default_port = os.environ.get('PORT')
+    if not default_port:
+        default_port = 50051
+    logging.info('Starting Raxxla debug gRPC server at [::]:%s...',
+                 default_port)
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
     api_raxxla_pb2_grpc.add_RaxxlaServicer_to_server(Raxxla(), server)
-    server.add_insecure_port('%s:%s' % (FLAGS.server_host, FLAGS.server_port))
+    server.add_insecure_port('[::]:%s' % default_port)
     server.start()
     server.wait_for_termination()
 

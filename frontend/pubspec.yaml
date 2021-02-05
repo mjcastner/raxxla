@@ -9,10 +9,11 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  fixnum: ^0.10.11
   cupertino_icons: ^1.0.1
   google_fonts: ^1.1.1
-  googleapis: any
-  googleapis_auth: any
+  grpc: ^2.9.0
+  protobuf: any
 
 dev_dependencies:
   flutter_test:

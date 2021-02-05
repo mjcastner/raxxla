@@ -11,6 +11,8 @@ service Raxxla {
   // TODO(mjcastner): Implement Datastore RPCs
   // https://cloud.google.com/datastore/docs/reference/data/rpc
   // TODO(mjcastner): Add batch set / get methods
+  rpc GetPlanet (GetRequest) returns (Planet) {}
+  rpc SetPlanet (PlanetRequest) returns (SetResponse) {}
   rpc GetPopulation (GetRequest) returns (Population) {}
   rpc SetPopulation (PopulationRequest) returns (SetResponse) {}
   rpc GetPowerplay (GetRequest) returns (Powerplay) {}
@@ -46,6 +48,11 @@ message SetResponse {
 
 message EdsmRequest {
   string json = 1;
+}
+
+message PlanetRequest {
+  int64 id = 1;
+  Planet planet = 2;
 }
 
 message PopulationRequest {

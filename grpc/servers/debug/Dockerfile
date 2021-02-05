@@ -8,5 +8,4 @@ WORKDIR /app
 RUN pip install -r requirements.txt \
     && pip install -r datastore_requirements.txt \
     && python -m grpc_tools.protoc -I . --python_out=. --grpc_python_out=. *.proto
-EXPOSE 50051
-ENTRYPOINT ["python"]
+ENTRYPOINT ["python", "server.py"]

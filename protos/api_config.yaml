@@ -1,11 +1,15 @@
+# Reference: https://cloud.google.com/service-infrastructure/docs/service-management/reference/rpc/google.api#index
 type: google.api.Service
-name: raxxla.endpoints.raxxla.cloud.goog
-
+config_version: 3
+name: raxxla-grpc-endpoint-664m6lgixa-uw.a.run.app
 title: Raxxla gRPC API
 apis:
-- name: raxxla.Raxxla
-
+  - name: raxxla.Raxxla
 usage:
   rules:
-  - selector: raxxla.Raxxla.ConvertPowerplayJson
+  - selector: raxxla.Raxxla.*
     allow_unregistered_calls: true
+backend:
+  rules:
+    - selector: "*"
+      address: grpcs://raxxla-grpc-server-664m6lgixa-uw.a.run.app
