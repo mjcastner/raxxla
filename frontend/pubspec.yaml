@@ -10,6 +10,7 @@ dependencies:
   flutter:
     sdk: flutter
   fixnum: ^0.10.11
+  fab_circular_menu: ^1.0.1
   cupertino_icons: ^1.0.1
   google_fonts: ^1.1.1
   grpc: ^2.9.0

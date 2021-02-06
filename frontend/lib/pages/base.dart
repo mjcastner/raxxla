@@ -43,8 +43,10 @@ class NavDrawer extends StatelessWidget {
               height: 50,
               width: 50,
             ),
-            Text('Univeral Cartographics\nStellar Cartography Database',
-                style: GoogleFonts.roboto(fontWeight: FontWeight.bold))
+            Text(
+              'Univeral Cartographics\nStellar Cartography Database',
+              style: GoogleFonts.roboto(fontWeight: FontWeight.bold),
+            )
           ]),
           decoration: BoxDecoration(
             color: Colors.black87,

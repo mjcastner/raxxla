@@ -1,24 +1,44 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:raxxla/pages/base.dart';
+import 'package:raxxla/protos/api_raxxla.pbgrpc.dart';
 import 'package:raxxla/protos/system.pb.dart';
 import 'package:raxxla/raxxla_grpc.dart';
 import 'package:fixnum/fixnum.dart';
+import 'package:fab_circular_menu/fab_circular_menu.dart';
 
 Int64 systemId = Int64(1732851569378);
+// Int64 systemId = Int64(1);
+RaxxlaClient raxxlaStub = initRaxxlaClient();
 
 class SystemsPage extends StatelessWidget {
-  final system = getSystemData(systemId);
+  final system = raxxlaStub.getSystem(GetRequest(id: systemId));
 
   @override
   Widget build(BuildContext context) {
+    double screenHeight = MediaQuery.of(context).size.height;
+    double screenWidth = MediaQuery.of(context).size.width;
+
     return Scaffold(
       appBar: AppBar(),
       drawer: NavDrawer(),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {},
-        backgroundColor: Colors.orange,
-        foregroundColor: Colors.white,
-        child: Icon(Icons.add),
+      floatingActionButton: FabCircularMenu(
+        fabOpenIcon: Icon(Icons.add),
+        ringColor: Colors.orange,
+        children: [
+          IconButton(
+            icon: Icon(Icons.language),
+            onPressed: () {},
+          ),
+          IconButton(
+            icon: Icon(Icons.flight_takeoff),
+            onPressed: () {},
+          ),
+          IconButton(
+            icon: Icon(Icons.home),
+            onPressed: () {},
+          ),
+        ],
       ),
       body: Center(
         child: FutureBuilder(
@@ -35,50 +55,79 @@ class SystemsPage extends StatelessWidget {
                   children: [
                     Row(
                       children: [
-                        Card(
-                          margin: EdgeInsets.fromLTRB(10, 0, 0, 10),
-                          elevation: 2,
-                          child: Container(
-                            height: 200,
-                            width: 250,
+                        Container(
+                          padding: EdgeInsets.fromLTRB(10, 10, 0, 0),
+                          child: Text(
+                            systemData.name,
+                            style: GoogleFonts.roboto(fontSize: 24),
+                          ),
+                        ),
+                      ],
+                    ),
+                    Row(
+                      children: [
+                        Container(
+                          padding: EdgeInsets.fromLTRB(12, 5, 0, 0),
+                          child: Text(
+                            'Galactic coordinates: $coords',
+                            style: GoogleFonts.roboto(fontSize: 12),
+                          ),
+                        ),
+                      ],
+                    ),
+                    Row(
+                      children: [
+                        Container(
+                          padding: EdgeInsets.fromLTRB(12, 5, 0, 0),
+                          child: Text(
+                            'Last updated: $systemUpdated UTC',
+                            style: GoogleFonts.roboto(fontSize: 12),
                           ),
                         ),
                       ],
                     ),
                   ],
-                  mainAxisAlignment: MainAxisAlignment.end,
                 ),
                 decoration: BoxDecoration(
                   image: DecorationImage(
-                    image: AssetImage('images/system/galaxy2.jpg'),
+                    image: AssetImage('images/system/neutron.gif'),
                     fit: BoxFit.cover,
                   ),
                 ),
               );
-              // return Column(
-              //   children: [
-              //     Row(
-              //       children: [
-              //         Card(
-              //           child: Column(
-              //             children: [
-              //               Text(systemData.id.toString()),
-              //               Text(systemData.name),
-              //               Text(systemUpdated.toString()),
-              //               Text(coords),
-              //             ],
-              //           ),
-              //         ),
-              //       ],
-              //     ),
-              //   ],
-              // );
             }
             if (snapshot.hasError) {
-              print(snapshot.error);
-              return Text('Crapple');
+              return Container(
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        'System data unavailable',
+                        style: GoogleFonts.roboto(
+                          color: Colors.deepOrange,
+                          fontSize: 48,
+                        ),
+                      )
+                    ],
+                  ),
+                ),
+                decoration: BoxDecoration(
+                  image: DecorationImage(
+                    image: AssetImage('images/system/error.gif'),
+                    fit: BoxFit.cover,
+                  ),
+                ),
+              );
             } else {
-              return CircularProgressIndicator();
+              return Container(
+                decoration: BoxDecoration(
+                  image: DecorationImage(
+                    image: AssetImage('images/loading.gif'),
+                    fit: BoxFit.cover,
+                  ),
+                ),
+              );
             }
           },
         ),
