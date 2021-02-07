@@ -288,6 +288,16 @@ class Raxxla(api_raxxla_pb2_grpc.RaxxlaServicer):
         planet.ParseFromString(proto_bytes)
         return planet
 
+    def GetPlanetsInSystem(self, request, context):
+        logging.info('Received request: %s', request)
+        ds_client = datastore.create_client()
+        planets = api_raxxla_pb2.PlanetResponse()
+        proto_bytes_list = datastore.get_proto_query(ds_client, 'planet', 'system_id', request.id)
+        for proto_bytes in proto_bytes_list:
+            planet = planets.planet.add()
+            planet.ParseFromString(proto_bytes)
+        return planets
+
     def SetPlanet(self, request, context):
         logging.info('Received request: %s', request)
         ds_client = datastore.create_client()

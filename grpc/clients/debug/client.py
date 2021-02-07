@@ -36,90 +36,95 @@ def main(argv):
     stub = api_raxxla_pb2_grpc.RaxxlaStub(channel)
 
     # Planet
-    planets = [
-        x for x in population_dict.get('bodies') if x.get('type') == 'Planet'
-    ]
-    for planet in planets:
-        planet_json = json.dumps(planet)
+    # planets = [
+    #     x for x in population_dict.get('bodies') if x.get('type') == 'Planet'
+    # ]
+    # for planet in planets:
+    #     planet_json = json.dumps(planet)
 
-        planet_proto = stub.ConvertPlanetJson(
-            api_raxxla_pb2.EdsmRequest(json=planet_json))
-        stub.SetPlanet(
-            api_raxxla_pb2.PlanetRequest(
-                id=planet_proto.id,
-                planet=planet_proto,
-            ))
-        planet_datastore_entity = stub.GetPlanet(
-            api_raxxla_pb2.GetRequest(id=planet_proto.id))
-    logging.info('Planet passed with %s planet(s)!', len(planets))
+    #     planet_proto = stub.ConvertPlanetJson(
+    #         api_raxxla_pb2.EdsmRequest(json=planet_json))
+    #     stub.SetPlanet(
+    #         api_raxxla_pb2.PlanetRequest(
+    #             id=planet_proto.id,
+    #             planet=planet_proto,
+    #         ))
+    #     planet_datastore_entity = stub.GetPlanet(
+    #         api_raxxla_pb2.GetRequest(id=planet_proto.id))
+    # logging.info('Planet passed with %s planet(s)!', len(planets))
 
     # Population
-    population_proto = stub.ConvertPopulationJson(
-        api_raxxla_pb2.EdsmRequest(json=POPULATION_JSON))
-    stub.SetPopulation(
-        api_raxxla_pb2.PopulationRequest(
-            id=population_proto.system_id,
-            population=population_proto,
-        ))
-    population_datastore_entity = stub.GetPopulation(
-        api_raxxla_pb2.GetRequest(id=population_proto.system_id))
-    logging.info('Population passed!')
+    # population_proto = stub.ConvertPopulationJson(
+    #     api_raxxla_pb2.EdsmRequest(json=POPULATION_JSON))
+    # stub.SetPopulation(
+    #     api_raxxla_pb2.PopulationRequest(
+    #         id=population_proto.system_id,
+    #         population=population_proto,
+    #     ))
+    # population_datastore_entity = stub.GetPopulation(
+    #     api_raxxla_pb2.GetRequest(id=population_proto.system_id))
+    # logging.info('Population passed!')
 
     # Powerplay
-    powerplay_proto = stub.ConvertPowerplayJson(
-        api_raxxla_pb2.EdsmRequest(json=POWERPLAY_JSON))
-    stub.SetPowerplay(
-        api_raxxla_pb2.PowerplayRequest(
-            id=powerplay_proto.system_id,
-            powerplay=powerplay_proto,
-        ))
-    powerplay_datastore_entity = stub.GetPowerplay(
-        api_raxxla_pb2.GetRequest(id=powerplay_proto.system_id))
-    logging.info('Powerplay passed!')
+    # powerplay_proto = stub.ConvertPowerplayJson(
+    #     api_raxxla_pb2.EdsmRequest(json=POWERPLAY_JSON))
+    # stub.SetPowerplay(
+    #     api_raxxla_pb2.PowerplayRequest(
+    #         id=powerplay_proto.system_id,
+    #         powerplay=powerplay_proto,
+    #     ))
+    # powerplay_datastore_entity = stub.GetPowerplay(
+    #     api_raxxla_pb2.GetRequest(id=powerplay_proto.system_id))
+    # logging.info('Powerplay passed!')
 
     # Settlement
-    stations = population_dict.get('stations')
-    for station in stations:
-        station_json = json.dumps(station)
-        settlement_proto = stub.ConvertStationJson(
-            api_raxxla_pb2.EdsmRequest(json=station_json))
-        stub.SetSettlement(
-            api_raxxla_pb2.SettlementRequest(
-                id=settlement_proto.id,
-                settlement=settlement_proto,
-            ))
-        settlement_datastore_entity = stub.GetSettlement(
-            api_raxxla_pb2.GetRequest(id=settlement_proto.id))
-    logging.info('Settlement passed with %s settlement(s)!', len(stations))
+    # stations = population_dict.get('stations')
+    # for station in stations:
+    #     station_json = json.dumps(station)
+    #     settlement_proto = stub.ConvertStationJson(
+    #         api_raxxla_pb2.EdsmRequest(json=station_json))
+    #     stub.SetSettlement(
+    #         api_raxxla_pb2.SettlementRequest(
+    #             id=settlement_proto.id,
+    #             settlement=settlement_proto,
+    #         ))
+    #     settlement_datastore_entity = stub.GetSettlement(
+    #         api_raxxla_pb2.GetRequest(id=settlement_proto.id))
+    # logging.info('Settlement passed with %s settlement(s)!', len(stations))
 
     # Star
-    stars = [
-        x for x in population_dict.get('bodies') if x.get('type') == 'Star'
-    ]
-    for star in stars:
-        star_json = json.dumps(star)
+    # stars = [
+    #     x for x in population_dict.get('bodies') if x.get('type') == 'Star'
+    # ]
+    # for star in stars:
+    #     star_json = json.dumps(star)
 
-        star_proto = stub.ConvertStarJson(
-            api_raxxla_pb2.EdsmRequest(json=star_json))
-        stub.SetStar(
-            api_raxxla_pb2.StarRequest(
-                id=star_proto.id,
-                star=star_proto,
-            ))
-        star_datastore_entity = stub.GetStar(
-            api_raxxla_pb2.GetRequest(id=star_proto.id))
-    logging.info('Star passed with %s star(s)!', len(stars))
+    #     star_proto = stub.ConvertStarJson(
+    #         api_raxxla_pb2.EdsmRequest(json=star_json))
+    #     stub.SetStar(
+    #         api_raxxla_pb2.StarRequest(
+    #             id=star_proto.id,
+    #             star=star_proto,
+    #         ))
+    #     star_datastore_entity = stub.GetStar(
+    #         api_raxxla_pb2.GetRequest(id=star_proto.id))
+    # logging.info('Star passed with %s star(s)!', len(stars))
 
     # System
-    system_proto = stub.ConvertSystemJson(
-        api_raxxla_pb2.EdsmRequest(json=POPULATION_JSON))
-    stub.SetSystem(
-        api_raxxla_pb2.SystemRequest(
-            id=system_proto.id,
-            system=system_proto,
-        ))
-    system_datastore_entity = stub.GetSystem(
-        api_raxxla_pb2.GetRequest(id=system_proto.id))
+    # system_proto = stub.ConvertSystemJson(
+    #     api_raxxla_pb2.EdsmRequest(json=POPULATION_JSON))
+    # stub.SetSystem(
+    #     api_raxxla_pb2.SystemRequest(
+    #         id=system_proto.id,
+    #         system=system_proto,
+    #     ))
+    # system_datastore_entity = stub.GetSystem(
+    #     api_raxxla_pb2.GetRequest(id=system_proto.id))
+
+    # Planets in system
+    planet_entities = stub.GetPlanetsInSystem(
+        api_raxxla_pb2.GetRequest(id=1732851569378))
+    logging.info('Planets in system passed!')
 
     channel.close()
 

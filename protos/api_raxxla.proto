@@ -7,11 +7,9 @@ import "society.proto";
 import "system.proto";
 
 service Raxxla {
-  // Datastore methods
-  // TODO(mjcastner): Implement Datastore RPCs
-  // https://cloud.google.com/datastore/docs/reference/data/rpc
   // TODO(mjcastner): Add batch set / get methods
   rpc GetPlanet (GetRequest) returns (Planet) {}
+  rpc GetPlanetsInSystem (GetRequest) returns (PlanetResponse) {}
   rpc SetPlanet (PlanetRequest) returns (SetResponse) {}
   rpc GetPopulation (GetRequest) returns (Population) {}
   rpc SetPopulation (PopulationRequest) returns (SetResponse) {}
@@ -44,6 +42,10 @@ message SetResponse {
   }
 
   ResponseStatus code = 1;
+}
+
+message PlanetResponse {
+  repeated Planet planet = 1;
 }
 
 message EdsmRequest {
