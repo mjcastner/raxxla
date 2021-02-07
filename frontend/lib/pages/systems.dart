@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:raxxla/pages/base.dart';
+import 'package:raxxla/pages/planets.dart';
 import 'package:raxxla/protos/api_raxxla.pbgrpc.dart';
 import 'package:raxxla/protos/system.pb.dart';
 import 'package:raxxla/raxxla_grpc.dart';
@@ -26,17 +27,25 @@ class SystemsPage extends StatelessWidget {
         fabOpenIcon: Icon(Icons.add),
         ringColor: Colors.orange,
         children: [
-          IconButton(
-            icon: Icon(Icons.language),
+          FlatButton.icon(
             onPressed: () {},
-          ),
-          IconButton(
-            icon: Icon(Icons.flight_takeoff),
-            onPressed: () {},
-          ),
-          IconButton(
             icon: Icon(Icons.home),
+            label: Text('Overview'),
+          ),
+          FlatButton.icon(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => PlanetsPage(systemId)),
+              );
+            },
+            icon: Icon(Icons.home),
+            label: Text('System Map'),
+          ),
+          FlatButton.icon(
             onPressed: () {},
+            icon: Icon(Icons.home),
+            label: Text('Traffic'),
           ),
         ],
       ),
