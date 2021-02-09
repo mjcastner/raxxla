@@ -9,17 +9,18 @@ import "system.proto";
 service Raxxla {
   // TODO(mjcastner): Add batch set / get methods
   rpc GetPlanet (GetRequest) returns (Planet) {}
-  rpc GetPlanetsInSystem (GetRequest) returns (PlanetResponse) {}
   rpc SetPlanet (PlanetRequest) returns (SetResponse) {}
   rpc GetPopulation (GetRequest) returns (Population) {}
   rpc SetPopulation (PopulationRequest) returns (SetResponse) {}
   rpc GetPowerplay (GetRequest) returns (Powerplay) {}
   rpc SetPowerplay (PowerplayRequest) returns (SetResponse) {}
+  rpc BatchSetPowerplay (stream Powerplay) returns (SetResponse) {}
   rpc GetStar (GetRequest) returns (Star) {}
   rpc SetStar (StarRequest) returns (SetResponse) {}
   rpc GetSettlement (GetRequest) returns (Settlement) {}
   rpc SetSettlement (SettlementRequest) returns (SetResponse) {}
   rpc GetSystem (GetRequest) returns (System) {}
+  rpc GetSystemChildren (GetRequest) returns (SystemChildrenResponse) {}
   rpc SetSystem (SystemRequest) returns (SetResponse) {}
 
   // Conversion methods
@@ -44,8 +45,10 @@ message SetResponse {
   ResponseStatus code = 1;
 }
 
-message PlanetResponse {
-  repeated Planet planet = 1;
+message SystemChildrenResponse {
+  repeated Star star = 1;
+  repeated Planet planet = 2;
+  repeated Settlement settlement = 3;
 }
 
 message EdsmRequest {

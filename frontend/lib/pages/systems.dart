@@ -4,6 +4,7 @@ import 'package:raxxla/pages/base.dart';
 import 'package:raxxla/pages/planets.dart';
 import 'package:raxxla/protos/api_raxxla.pbgrpc.dart';
 import 'package:raxxla/protos/system.pb.dart';
+import 'package:raxxla/sol_example.dart';
 import 'package:raxxla/raxxla_grpc.dart';
 import 'package:fixnum/fixnum.dart';
 import 'package:fab_circular_menu/fab_circular_menu.dart';
@@ -13,7 +14,8 @@ Int64 systemId = Int64(1732851569378);
 RaxxlaClient raxxlaStub = initRaxxlaClient();
 
 class SystemsPage extends StatelessWidget {
-  final system = raxxlaStub.getSystem(GetRequest(id: systemId));
+  // final system = raxxlaStub.getSystem(GetRequest(id: systemId));
+  final system = solFuture();
 
   @override
   Widget build(BuildContext context) {
@@ -106,6 +108,7 @@ class SystemsPage extends StatelessWidget {
               );
             }
             if (snapshot.hasError) {
+              print(snapshot.error);
               return Container(
                 child: Center(
                   child: Column(

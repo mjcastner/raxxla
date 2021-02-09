@@ -283,8 +283,7 @@ class Raxxla(api_raxxla_pb2_grpc.RaxxlaServicer):
         logging.info('Received request: %s', request)
         ds_client = datastore.create_client()
         planet = bodies_pb2.Planet()
-        proto_bytes = datastore.get_proto(ds_client, 'planet',
-                                                request.id)
+        proto_bytes = datastore.get_proto(ds_client, 'planet', request.id)
         planet.ParseFromString(proto_bytes)
         return planet
 
@@ -292,7 +291,8 @@ class Raxxla(api_raxxla_pb2_grpc.RaxxlaServicer):
         logging.info('Received request: %s', request)
         ds_client = datastore.create_client()
         planets = api_raxxla_pb2.PlanetResponse()
-        proto_bytes_list = datastore.get_proto_query(ds_client, 'planet', 'system_id', request.id)
+        proto_bytes_list = datastore.get_proto_query(ds_client, 'planet',
+                                                     'system_id', request.id)
         for proto_bytes in proto_bytes_list:
             planet = planets.planet.add()
             planet.ParseFromString(proto_bytes)
@@ -304,7 +304,7 @@ class Raxxla(api_raxxla_pb2_grpc.RaxxlaServicer):
         response = api_raxxla_pb2.SetResponse()
         try:
             datastore.set_proto(ds_client, 'planet', request.id,
-                                      request.planet)
+                                request.planet)
             response.code = 1
             return response
         except Exception as e:
@@ -316,8 +316,7 @@ class Raxxla(api_raxxla_pb2_grpc.RaxxlaServicer):
         logging.info('Received request: %s', request)
         ds_client = datastore.create_client()
         population = society_pb2.Population()
-        proto_bytes = datastore.get_proto(ds_client, 'population',
-                                                request.id)
+        proto_bytes = datastore.get_proto(ds_client, 'population', request.id)
         population.ParseFromString(proto_bytes)
         return population
 
@@ -327,7 +326,7 @@ class Raxxla(api_raxxla_pb2_grpc.RaxxlaServicer):
         response = api_raxxla_pb2.SetResponse()
         try:
             datastore.set_proto(ds_client, 'population', request.id,
-                                      request.population)
+                                request.population)
             response.code = 1
             return response
         except Exception as e:
@@ -339,8 +338,7 @@ class Raxxla(api_raxxla_pb2_grpc.RaxxlaServicer):
         logging.info('Received request: %s', request)
         ds_client = datastore.create_client()
         powerplay = society_pb2.Powerplay()
-        proto_bytes = datastore.get_proto(ds_client, 'powerplay',
-                                                request.id)
+        proto_bytes = datastore.get_proto(ds_client, 'powerplay', request.id)
         powerplay.ParseFromString(proto_bytes)
         return powerplay
 
@@ -350,13 +348,33 @@ class Raxxla(api_raxxla_pb2_grpc.RaxxlaServicer):
         response = api_raxxla_pb2.SetResponse()
         try:
             datastore.set_proto(ds_client, 'powerplay', request.id,
-                                      request.powerplay)
+                                request.powerplay)
             response.code = 1
             return response
         except Exception as e:
             logging.error(e)
             response.code = 0
             return response
+
+    def BatchSetPowerplay(self, request_iterator, context):
+        powerplay_batch = []
+        ds_client = datastore.create_client()
+        for x in request_iterator:
+            if len(powerplay_batch) < 10:
+                powerplay_batch.append(x)
+            else:
+                logging.info('Processing batch of size %s',
+                             len(powerplay_batch))
+                datastore.set_proto_batch(ds_client, 'powerplay', 'system_id',
+                                          powerplay_batch)
+                powerplay_batch.clear()
+        logging.info('Processing batch of size %s', len(powerplay_batch))
+        datastore.set_proto_batch(ds_client, 'powerplay', 'system_id',
+                                          powerplay_batch)
+
+        response = api_raxxla_pb2.SetResponse()
+        response.code = 1
+        return response
 
     def GetStar(self, request, context):
         logging.info('Received request: %s', request)
@@ -371,8 +389,7 @@ class Raxxla(api_raxxla_pb2_grpc.RaxxlaServicer):
         ds_client = datastore.create_client()
         response = api_raxxla_pb2.SetResponse()
         try:
-            datastore.set_proto(ds_client, 'star', request.id,
-                                      request.star)
+            datastore.set_proto(ds_client, 'star', request.id, request.star)
             response.code = 1
             return response
         except Exception as e:
@@ -384,8 +401,7 @@ class Raxxla(api_raxxla_pb2_grpc.RaxxlaServicer):
         logging.info('Received request: %s', request)
         ds_client = datastore.create_client()
         settlement = settlement_pb2.Settlement()
-        proto_bytes = datastore.get_proto(ds_client, 'settlement',
-                                                request.id)
+        proto_bytes = datastore.get_proto(ds_client, 'settlement', request.id)
         settlement.ParseFromString(proto_bytes)
         return settlement
 
@@ -395,7 +411,7 @@ class Raxxla(api_raxxla_pb2_grpc.RaxxlaServicer):
         response = api_raxxla_pb2.SetResponse()
         try:
             datastore.set_proto(ds_client, 'settlement', request.id,
-                                      request.settlement)
+                                request.settlement)
             response.code = 1
             return response
         except Exception as e:
@@ -407,10 +423,23 @@ class Raxxla(api_raxxla_pb2_grpc.RaxxlaServicer):
         logging.info('Received request: %s', request)
         ds_client = datastore.create_client()
         system = system_pb2.System()
-        proto_bytes = datastore.get_proto(ds_client, 'system',
-                                                request.id)
+        proto_bytes = datastore.get_proto(ds_client, 'system', request.id)
         system.ParseFromString(proto_bytes)
         return system
+
+    def GetSystemChildren(self, request, context):
+        logging.info('Received request: %s', request)
+        ds_client = datastore.create_client()
+        child_types = ['planet', 'settlement', 'star']
+        children = api_raxxla_pb2.SystemChildrenResponse()
+
+        for child_type in child_types:
+            bytes_list = datastore.get_proto_query(ds_client, child_type,
+                                                   'system_id', request.id)
+            for proto_bytes in bytes_list:
+                child_pb = getattr(children, child_type).add()
+                child_pb.ParseFromString(proto_bytes)
+        return children
 
     def SetSystem(self, request, context):
         logging.info('Received request: %s', request)
