@@ -1,5 +1,6 @@
 import json
 import os
+import re
 from concurrent import futures
 from datetime import datetime
 from pprint import pprint
@@ -15,6 +16,16 @@ from absl import app, flags, logging
 from commonlib.google.datastore import datastore
 
 import utils
+
+# Global vars
+JSON_RE_PATTERN = re.compile(r'(\{.*\})')
+JSON_RE_SEARCH = JSON_RE_PATTERN.search
+
+def _extract_json(raw_input: str):
+        json_re_match = JSON_RE_SEARCH(raw_input)
+        if json_re_match:
+            json_string = json_re_match.group(1)
+            return json_string
 
 
 class Raxxla(api_raxxla_pb2_grpc.RaxxlaServicer):
@@ -151,11 +162,17 @@ class Raxxla(api_raxxla_pb2_grpc.RaxxlaServicer):
                 'updated': 'date',
             },
         }
-        edsm_dict = json.loads(request.json)
+        
         powerplay = society_pb2.Powerplay()
-        utils.map_proto_fields(powerplay, schema_mapping, edsm_dict)
-
-        return powerplay
+        try:
+            edsm_json = _extract_json(request.json)
+            if edsm_json:
+                edsm_dict = json.loads(edsm_json)
+                utils.map_proto_fields(powerplay, schema_mapping, edsm_dict)
+            return powerplay
+        except json.decoder.JSONDecodeError:
+            logging.error('Failed to parse JSON string: %s', request.json)
+            return powerplay
 
     def ConvertStationJson(self, request, context):
         logging.info('Received request: %s', request)
@@ -360,7 +377,7 @@ class Raxxla(api_raxxla_pb2_grpc.RaxxlaServicer):
         powerplay_batch = []
         ds_client = datastore.create_client()
         for x in request_iterator:
-            if len(powerplay_batch) < 10:
+            if len(powerplay_batch) < datastore.BATCH_SIZE:
                 powerplay_batch.append(x)
             else:
                 logging.info('Processing batch of size %s',

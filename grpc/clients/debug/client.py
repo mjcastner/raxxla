@@ -229,8 +229,9 @@ def main(argv):
 
     powerplay_stream = json.loads(POWERPLAY_STREAM_JSON)
     powerplay_protos = [stub.ConvertPowerplayJson(api_raxxla_pb2.EdsmRequest(json=json.dumps(x))) for x in powerplay_stream]
-    response = stub.BatchSetPowerplay(iter(powerplay_protos))
-    print(response)
+    [print(x) for x in powerplay_protos]
+    # response = stub.BatchSetPowerplay(iter(powerplay_protos))
+    # print(response)
 
     channel.close()
 
