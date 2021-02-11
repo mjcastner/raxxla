@@ -18,27 +18,15 @@ from commonlib.google.datastore import datastore
 
 import utils
 
-# Global vars
-JSON_RE_PATTERN = re.compile(r'(\{.*\})')
-JSON_RE_SEARCH = JSON_RE_PATTERN.search
 
-
-def _extract_json(raw_input: str):
-    json_re_match = JSON_RE_SEARCH(raw_input)
-    if json_re_match:
-        json_string = json_re_match.group(1)
-        return json_string
-
-
-class Converter:
-    # def __init__(self, type, edsm_dict):
-    def planet(self, edsm_dict):
+def converter(file_type, edsm_dict):
+    def _convert_planet(edsm_dict):
         planet = bodies_pb2.Planet()
         utils.map_proto_fields(planet, schema.EDSM.get('planet'), edsm_dict)
 
         return planet
 
-    def population(self, edsm_dict):
+    def _convert_population(edsm_dict):
         population = society_pb2.Population()
         schema_mapping = utils.recursive_dict_get(schema.EDSM,
                                                   'population.base')
@@ -76,20 +64,20 @@ class Converter:
 
         return population
 
-    def powerplay(self, edsm_dict):
+    def _convert_powerplay(edsm_dict):
         powerplay = society_pb2.Powerplay()
         utils.map_proto_fields(powerplay, schema.EDSM.get('powerplay'),
                                edsm_dict)
 
         return powerplay
 
-    def star(self, edsm_dict):
+    def _convert_star(edsm_dict):
         star = bodies_pb2.Star()
         utils.map_proto_fields(star, schema.EDSM.get('star'), edsm_dict)
 
         return star
 
-    def station(self, edsm_dict):
+    def _convert_station(edsm_dict):
         station = settlement_pb2.Settlement()
         utils.map_proto_fields(station, schema.EDSM.get('station'), edsm_dict)
 
@@ -125,29 +113,53 @@ class Converter:
 
         return station
     
-    def system(self, edsm_dict):
+    def _convert_system(edsm_dict):
         system = system_pb2.System()
-        utils.map_proto_fields(system, scschema.EDSM.get('system')hema_mapping, edsm_dict)
+        utils.map_proto_fields(system, schema.EDSM.get('system'), edsm_dict)
 
         return system
+
+    if file_type == 'powerplay':
+        return _convert_powerplay(edsm_dict)
 
 
 class Raxxla(api_raxxla_pb2_grpc.RaxxlaServicer):
     def ConvertEdsm(self, request, context):
+        logging.info('Received EDSM JSON: %s', request.json)
         response = api_raxxla_pb2.ConverterResponse()
         response.type = request.type
 
         try:
-            edsm_dict = json.loads(request.json)
-            schema_converter = Converter()
-            print(dir(schema_converter))
-            # edsm_proto = schema_converter.getattr(request.type)
-            response.code = 0
-            return response
+            edsm_json = utils.extract_json(request.json)
+            if edsm_json:
+                edsm_dict = json.loads(edsm_json)
+                edsm_proto = converter(request.type, edsm_dict)
+                response.code = 0
+                response.protobuf = edsm_proto.SerializeToString()
+                return response
+            else:
+                response.code = 1
+                return response
         except json.decoder.JSONDecodeError:
             logging.error('Failed to parse JSON string: %s', request.json)
             response.code = 1
             return response
+
+    def BatchSetPowerplay(self, request, context):
+        logging.info('Inserting Powerplay batch...')
+        ds_client = datastore.create_client()
+        response = api_raxxla_pb2.SetResponse()
+
+        try:
+            datastore.set_proto_batch(ds_client, 'powerplay', 'system_id',
+                                      request.powerplay)
+            response.code = 0
+        except Exception as e:
+            logging.error(e)
+            response.code = 1
+
+        return response
+        
 
 
 def main(argv):

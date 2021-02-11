@@ -4,9 +4,17 @@ import re
 
 import bodies_pb2
 
+JSON_RE_PATTERN = re.compile(r'(\{.*\})')
+JSON_RE_SEARCH = JSON_RE_PATTERN.search
 PART_NAME_RE = re.compile(r'[0-9]{1}[A-Z]{1}.{1}(.*)')
 PART_QUALITY_RE = re.compile(r'[0-9]{1}[A-Z]{1}')
 
+
+def extract_json(raw_input: str):
+    json_re_match = JSON_RE_SEARCH(raw_input)
+    if json_re_match:
+        json_string = json_re_match.group(1)
+        return json_string
 
 def extract_quality(input_string: str):
     name_match = re.search(PART_NAME_RE, input_string)

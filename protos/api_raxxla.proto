@@ -7,32 +7,38 @@ import "society.proto";
 import "system.proto";
 
 service Raxxla {
-
-  // Conversion methods
+  rpc GetPowerplay (KeyRequest) returns (Powerplay) {}
+  rpc SetPowerplay (Powerplay) returns (SetResponse) {}
+  rpc BatchSetPowerplay (BatchInsertRequest) returns (SetResponse) {}
   rpc ConvertEdsm (EdsmRequest) returns (ConverterResponse) {}
 }
 
+// Requests
+message EdsmRequest {
+  string type = 1;
+  string json = 2;
+}
+
+message KeyRequest {
+  int64 id = 1;
+}
+
+message BatchInsertRequest {
+  repeated Powerplay powerplay = 1;
+}
+
+// Responses
 enum ResponseCodes {
   SUCCESS = 0;
   FAILED = 1;
 }
 
-enum Types {
-  PLANET = 0;
-  POPULATION = 1;
-  POWERPLAY = 2;
-  SETTLEMENT = 3;
-  STAR = 4;
-  SYSTEM = 5;
-}
-
 message ConverterResponse {
   ResponseCodes code = 1;
-  Types type = 2;
+  string type = 2;
   bytes protobuf = 3;
 }
 
-message EdsmRequest {
-  Types type = 1;
-  string json = 2;
+message SetResponse {
+  ResponseCodes code = 1;
 }

@@ -8,7 +8,9 @@ import urllib.request
 import api_raxxla_pb2
 import api_raxxla_pb2_grpc
 import grpc
+import society_pb2
 from absl import app, flags, logging
+from commonlib import utils
 from commonlib.google.storage import gcs
 
 # Global vars
@@ -20,6 +22,13 @@ URLS = {
     'powerplay': 'https://www.edsm.net/dump/powerPlay.json.gz',
     # 'stations': 'https://www.edsm.net/dump/stations.json.gz',
     # 'systems': 'https://www.edsm.net/dump/systemsWithCoordinates.json.gz',
+}
+TYPES = {
+    'powerplay': {
+        'url': 'https://www.edsm.net/dump/powerPlay.json.gz',
+        'proto': society_pb2.Powerplay,
+        'endpoint': 'BatchSetPowerplay',
+    }
 }
 FILE_TYPES = list(URLS.keys())
 FILE_TYPES_META = FILE_TYPES.copy()
@@ -43,42 +52,41 @@ def grpc_batch_process(stub, file_type: str, gcs_blob):
     logging.info('Converting data into protobuf format...')
     gcs_blob_stream = io.BytesIO(gcs_blob.download_as_bytes())
     gcs_file = gzip.open(gcs_blob_stream, 'rt')
-    edsm_protos = [stub.ConvertPowerplayJson(api_raxxla_pb2.EdsmRequest(json=line)) for line in gcs_file]
-    filtered_edsm_protos = [x for x in edsm_protos if x.system_id]
+    convert_responses = [
+        stub.ConvertEdsm(api_raxxla_pb2.EdsmRequest(type=file_type, json=line))
+        for line in gcs_file
+    ]
+    converted_proto_bytes = [
+        x.protobuf for x in convert_responses if x.code == 0
+    ]
 
-    logging.info('Inserting batch...')
-    for edsm_proto in filtered_edsm_protos:
-        stub.SetPowerplay(
-            api_raxxla_pb2.PowerplayRequest(
-                id=edsm_proto.system_id,
-                powerplay=edsm_proto,
-            )
-        )
+    proto_batch = []
+    batch_futures = []
+    for proto_bytes in converted_proto_bytes:
+        if len(proto_batch) < BATCH_SIZE:
+            proto = TYPES[FLAGS.file_type].get('proto')()
+            proto.ParseFromString(proto_bytes)
+            proto_batch.append(proto)
+        else:
+            logging.info('Inserting batch of size %s...', len(proto_batch))
+            batch_request = api_raxxla_pb2.BatchInsertRequest()
+            batch_field = getattr(batch_request, file_type)
+            batch_field.extend(proto_batch)
+            batch_endpoint = getattr(stub, TYPES[FLAGS.file_type].get('endpoint'))
+            batch_futures.append(batch_endpoint.future(batch_request))
+            proto_batch.clear()
 
-    # proto_batch = []
-    # batch_responses = []
-    # for edsm_proto in concurrent.futures.as_completed(edsm_protos):
-    #     if len(proto_batch) <= BATCH_SIZE and edsm_proto.system_id:
-    #         proto_batch.append(edsm_proto)
-    #     else:
-    #         batch_responses.append(stub.BatchSetPowerplay.future(iter(proto_batch)))
+    logging.info('Inserting batch of size %s...', len(proto_batch))
+    batch_request = api_raxxla_pb2.BatchInsertRequest()
+    batch_field = getattr(batch_request, file_type)
+    batch_field.extend(proto_batch)
+    batch_endpoint = getattr(stub, TYPES[FLAGS.file_type].get('endpoint'))
+    batch_futures.append(batch_endpoint.future(batch_request))
+    proto_batch.clear()
 
-    # for batch_response in concurrent.futures.as_completed(batch_responses):
-    #     logging.info('Batch completed with status: %s', batch_response.code)
-    # json_batch = []
-    # for line in gcs_file:
-    #     if len(json_batch) <= BATCH_SIZE:
-    #         json_batch.append(line)
-    #     else:
-    #         edsm_protos = [stub.ConvertPowerplayJson.future(api_raxxla_pb2.EdsmRequest(json=line)) for line in json_batch]
-    #         filtered_edsm_protos = [x for x in edsm_protos if x.system_id]
-    #         response = stub.BatchSetPowerplay(iter(filtered_edsm_protos))
-    #         logging.info('Batch of %s items processed with %s', len(json_batch), response.code)
-    #         json_batch.clear()
-
-    # filtered_edsm_protos = [x for x in edsm_protos if x.system_id]
-    # response = stub.BatchSetPowerplay(iter(filtered_edsm_protos))
-    # logging.info('Batch of %s items processed with %s', len(json_batch), response.code)
+    logging.info('Waiting for batches to finish...')
+    batch_results = [x.result() for x in batch_futures]
+    logging.info('Complete!')
 
     return
 
@@ -114,12 +122,13 @@ def main(argv):
         logging.info('Fetching all files...')
     else:
         logging.info('Fetching %s from EDSM...', FLAGS.file_type)
-        edsm_file_blob = gcs_fetch(FLAGS.file_type, URLS[FLAGS.file_type])
+        edsm_file_blob = gcs_fetch(FLAGS.file_type, TYPES[FLAGS.file_type].get('url'))
         grpc_batch_status = grpc_batch_process(stub, FLAGS.file_type,
                                                edsm_file_blob)
         gcs_files.append(edsm_file_blob)
 
     # channel.close()
+
 
 if __name__ == '__main__':
     app.run(main)
