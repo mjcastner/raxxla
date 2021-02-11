@@ -7,80 +7,32 @@ import "society.proto";
 import "system.proto";
 
 service Raxxla {
-  // TODO(mjcastner): Add batch set / get methods
-  rpc GetPlanet (GetRequest) returns (Planet) {}
-  rpc SetPlanet (PlanetRequest) returns (SetResponse) {}
-  rpc GetPopulation (GetRequest) returns (Population) {}
-  rpc SetPopulation (PopulationRequest) returns (SetResponse) {}
-  rpc GetPowerplay (GetRequest) returns (Powerplay) {}
-  rpc SetPowerplay (PowerplayRequest) returns (SetResponse) {}
-  rpc BatchSetPowerplay (stream Powerplay) returns (SetResponse) {}
-  rpc GetStar (GetRequest) returns (Star) {}
-  rpc SetStar (StarRequest) returns (SetResponse) {}
-  rpc GetSettlement (GetRequest) returns (Settlement) {}
-  rpc SetSettlement (SettlementRequest) returns (SetResponse) {}
-  rpc GetSystem (GetRequest) returns (System) {}
-  rpc GetSystemChildren (GetRequest) returns (SystemChildrenResponse) {}
-  rpc SetSystem (SystemRequest) returns (SetResponse) {}
 
   // Conversion methods
-  rpc ConvertPlanetJson (EdsmRequest) returns (Planet) {}
-  rpc ConvertPopulationJson (EdsmRequest) returns (Population) {}
-  rpc ConvertPowerplayJson (EdsmRequest) returns (Powerplay) {}
-  rpc ConvertStarJson (EdsmRequest) returns (Star) {}
-  rpc ConvertStationJson (EdsmRequest) returns (Settlement) {}
-  rpc ConvertSystemJson (EdsmRequest) returns (System) {}
+  rpc ConvertEdsm (EdsmRequest) returns (ConverterResponse) {}
 }
 
-message GetRequest {
-  int64 id = 1;
+enum ResponseCodes {
+  SUCCESS = 0;
+  FAILED = 1;
 }
 
-message SetResponse {
-  enum ResponseStatus {
-    FAILED = 0;
-    SUCCESS = 1;
-  }
-
-  ResponseStatus code = 1;
+enum Types {
+  PLANET = 0;
+  POPULATION = 1;
+  POWERPLAY = 2;
+  SETTLEMENT = 3;
+  STAR = 4;
+  SYSTEM = 5;
 }
 
-message SystemChildrenResponse {
-  repeated Star star = 1;
-  repeated Planet planet = 2;
-  repeated Settlement settlement = 3;
+message ConverterResponse {
+  ResponseCodes code = 1;
+  Types type = 2;
+  bytes protobuf = 3;
 }
 
 message EdsmRequest {
-  string json = 1;
-}
-
-message PlanetRequest {
-  int64 id = 1;
-  Planet planet = 2;
-}
-
-message PopulationRequest {
-  int64 id = 1;
-  Population population = 2;
-}
-
-message PowerplayRequest {
-  int64 id = 1;
-  Powerplay powerplay = 2;
-}
-
-message StarRequest {
-  int64 id = 1;
-  Star star = 2;
-}
-
-message SettlementRequest {
-  int64 id = 1;
-  Settlement settlement = 2;
-}
-
-message SystemRequest {
-  int64 id = 1;
-  System system = 2;
+  Types type = 1;
+  string json = 2;
 }

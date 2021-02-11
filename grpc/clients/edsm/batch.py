@@ -1,3 +1,4 @@
+import concurrent.futures
 import gzip
 import io
 import json
@@ -11,6 +12,7 @@ from absl import app, flags, logging
 from commonlib.google.storage import gcs
 
 # Global vars
+BATCH_SIZE = 100
 DATASET = 'edsm'
 URLS = {
     # 'bodies': 'https://www.edsm.net/dump/bodies7days.json.gz',
@@ -43,8 +45,40 @@ def grpc_batch_process(stub, file_type: str, gcs_blob):
     gcs_file = gzip.open(gcs_blob_stream, 'rt')
     edsm_protos = [stub.ConvertPowerplayJson(api_raxxla_pb2.EdsmRequest(json=line)) for line in gcs_file]
     filtered_edsm_protos = [x for x in edsm_protos if x.system_id]
-    response = stub.BatchSetPowerplay(iter(filtered_edsm_protos))
-    print(response)
+
+    logging.info('Inserting batch...')
+    for edsm_proto in filtered_edsm_protos:
+        stub.SetPowerplay(
+            api_raxxla_pb2.PowerplayRequest(
+                id=edsm_proto.system_id,
+                powerplay=edsm_proto,
+            )
+        )
+
+    # proto_batch = []
+    # batch_responses = []
+    # for edsm_proto in concurrent.futures.as_completed(edsm_protos):
+    #     if len(proto_batch) <= BATCH_SIZE and edsm_proto.system_id:
+    #         proto_batch.append(edsm_proto)
+    #     else:
+    #         batch_responses.append(stub.BatchSetPowerplay.future(iter(proto_batch)))
+
+    # for batch_response in concurrent.futures.as_completed(batch_responses):
+    #     logging.info('Batch completed with status: %s', batch_response.code)
+    # json_batch = []
+    # for line in gcs_file:
+    #     if len(json_batch) <= BATCH_SIZE:
+    #         json_batch.append(line)
+    #     else:
+    #         edsm_protos = [stub.ConvertPowerplayJson.future(api_raxxla_pb2.EdsmRequest(json=line)) for line in json_batch]
+    #         filtered_edsm_protos = [x for x in edsm_protos if x.system_id]
+    #         response = stub.BatchSetPowerplay(iter(filtered_edsm_protos))
+    #         logging.info('Batch of %s items processed with %s', len(json_batch), response.code)
+    #         json_batch.clear()
+
+    # filtered_edsm_protos = [x for x in edsm_protos if x.system_id]
+    # response = stub.BatchSetPowerplay(iter(filtered_edsm_protos))
+    # logging.info('Batch of %s items processed with %s', len(json_batch), response.code)
 
     return
 
@@ -85,7 +119,7 @@ def main(argv):
                                                edsm_file_blob)
         gcs_files.append(edsm_file_blob)
 
-    channel.close()
+    # channel.close()
 
 if __name__ == '__main__':
     app.run(main)

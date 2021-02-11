@@ -21,11 +21,12 @@ import utils
 JSON_RE_PATTERN = re.compile(r'(\{.*\})')
 JSON_RE_SEARCH = JSON_RE_PATTERN.search
 
+
 def _extract_json(raw_input: str):
-        json_re_match = JSON_RE_SEARCH(raw_input)
-        if json_re_match:
-            json_string = json_re_match.group(1)
-            return json_string
+    json_re_match = JSON_RE_SEARCH(raw_input)
+    if json_re_match:
+        json_string = json_re_match.group(1)
+        return json_string
 
 
 class Raxxla(api_raxxla_pb2_grpc.RaxxlaServicer):
@@ -162,7 +163,7 @@ class Raxxla(api_raxxla_pb2_grpc.RaxxlaServicer):
                 'updated': 'date',
             },
         }
-        
+
         powerplay = society_pb2.Powerplay()
         try:
             edsm_json = _extract_json(request.json)
@@ -374,20 +375,10 @@ class Raxxla(api_raxxla_pb2_grpc.RaxxlaServicer):
             return response
 
     def BatchSetPowerplay(self, request_iterator, context):
-        powerplay_batch = []
         ds_client = datastore.create_client()
-        for x in request_iterator:
-            if len(powerplay_batch) < datastore.BATCH_SIZE:
-                powerplay_batch.append(x)
-            else:
-                logging.info('Processing batch of size %s',
-                             len(powerplay_batch))
-                datastore.set_proto_batch(ds_client, 'powerplay', 'system_id',
-                                          powerplay_batch)
-                powerplay_batch.clear()
-        logging.info('Processing batch of size %s', len(powerplay_batch))
+        logging.info('Inserting Powerplay batch...')
         datastore.set_proto_batch(ds_client, 'powerplay', 'system_id',
-                                          powerplay_batch)
+                                  request_iterator)
 
         response = api_raxxla_pb2.SetResponse()
         response.code = 1
