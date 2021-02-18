@@ -1,10 +1,10 @@
 syntax = "proto3";
 package raxxla;
 
-import "bodies.proto";
-import "settlement.proto";
-import "society.proto";
-import "system.proto";
+import "protos/bodies.proto";
+import "protos/settlement.proto";
+import "protos/society.proto";
+import "protos/system.proto";
 
 service Raxxla {
   // Bodies

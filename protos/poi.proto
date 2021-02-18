@@ -1,5 +1,5 @@
 syntax = "proto3";
-import "system.proto";
+import "protos/system.proto";
 
 message Metadata {
   string type = 1;
