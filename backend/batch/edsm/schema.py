@@ -3,10 +3,10 @@ import json
 import re
 from datetime import datetime
 
-import bodies_pb2
-import society_pb2
-import settlement_pb2
-import system_pb2
+from protos import bodies_pb2
+from protos import society_pb2
+from protos import settlement_pb2
+from protos import system_pb2
 from absl import logging
 from commonlib import utils
 
@@ -16,6 +16,8 @@ class EdsmObject:
         self.file_type = file_type
         self.json_string = json_string
         self.json_dict = None
+        self.key_field = None
+        self.kind = None
         self.part_name_re = re.compile(r'[0-9]{1}[A-Z]{1}.{1}(.*)')
         self.part_quality_re = re.compile(r'[0-9]{1}[A-Z]{1}')
         self.schema_mappings = {
@@ -141,7 +143,7 @@ class EdsmObject:
                     'updated': 'updateTime',
                 },
             },
-            'stations': {
+            'settlement': {
                 'id': 'id',
                 'system_id': 'systemId64',
                 'name': 'name',
@@ -192,6 +194,8 @@ class EdsmObject:
 
         try:
             self.json_dict = json.loads(utils.extract_json(self.json_string))
+            self._set_datastore_kind()
+            self._set_datastore_key_field()
         except Exception as e:
             logging.error(e)
 
@@ -382,31 +386,38 @@ class EdsmObject:
                 if dict_value:
                     utils.recursive_class_set(proto_obj, field, dict_value)
 
-    def generate_proto(self):
+    def _set_datastore_key_field(self):
+        if self.kind == 'powerplay' or self.kind == 'population':
+            self.key_field = 'system_id'
+        else:
+            self.key_field = 'id'
+
+    def _set_datastore_kind(self):
         if self.file_type == 'bodies':
             body_type = self.json_dict.get('type')
-            schema = self.schema_mappings.get(body_type.lower())
-            if body_type == 'Planet':
-                proto_obj = bodies_pb2.Planet()
-            elif body_type == 'Star':
-                proto_obj = bodies_pb2.Star()
-            else:
-                raise Exception('Unsupported EDSM body type')
-        if self.file_type == 'powerplay':
-            schema = self.schema_mappings.get(self.file_type)
-            proto_obj = society_pb2.Powerplay()
-        elif self.file_type == 'population':
-            schema = self.schema_mappings.get(self.file_type)
-            proto_obj = society_pb2.Population()
+            self.kind = body_type.lower()
         elif self.file_type == 'stations':
-            schema = self.schema_mappings.get(self.file_type)
-            proto_obj = settlement_pb2.Settlement()
+            self.kind = 'settlement'
         elif self.file_type == 'systems':
-            schema = self.schema_mappings.get(self.file_type)
+            self.kind = 'system'
+        else:
+            self.kind = self.file_type
+
+    def generate_proto(self):
+        schema = self.schema_mappings.get(self.kind)
+
+        if self.kind == 'planet':
+            proto_obj = bodies_pb2.Planet()
+        elif self.kind == 'star':
+            proto_obj = bodies_pb2.Star()
+        elif self.kind == 'powerplay':
+            proto_obj = society_pb2.Powerplay()
+        elif self.kind == 'population':
+            proto_obj = society_pb2.Population()
+        elif self.kind == 'settlement':
+            proto_obj = settlement_pb2.Settlement()
+        elif self.kind == 'system':
             proto_obj = system_pb2.System()
 
         self._map_proto_fields(proto_obj, schema, self.json_dict)
-        # print(self.json_dict)
-        # print(proto_obj)
-        # print('\n\n')
         return proto_obj
