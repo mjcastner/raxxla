@@ -14,9 +14,9 @@ py_binary(
         "//protos:society_proto_py",
         "//protos:system_proto_py",
         requirement("absl-py"),
+        # requirement("cython"),
         requirement("google-cloud-datastore"),
         requirement("grpcio"),
         requirement("grpcio-tools"),
-        requirement("setuptools"),
     ],
 )
