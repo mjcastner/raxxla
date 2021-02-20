@@ -1,0 +1,4 @@
+steps:
+- name: 'gcr.io/cloud-marketplace-containers/google/bazel'
+  entrypoint: 'bazel'
+  args: ['build', '//backend/grpc/server:main']

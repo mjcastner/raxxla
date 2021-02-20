@@ -3,49 +3,26 @@ import os
 import re
 from concurrent import futures
 from datetime import datetime
-from pprint import pprint
-from threading import Thread
 
-import api_raxxla_pb2
-import api_raxxla_pb2_grpc
-import bodies_pb2
 import grpc
-import settlement_pb2
-import society_pb2
-import system_pb2
 from absl import app, flags, logging
 from commonlib import utils
 from commonlib.google.datastore import datastore
-
-import schema
+from protos import (api_raxxla_pb2, api_raxxla_pb2_grpc, bodies_pb2,
+                    settlement_pb2, society_pb2, system_pb2)
 
 WORKER_POOL = futures.ThreadPoolExecutor(max_workers=10)
 
 
 class Raxxla(api_raxxla_pb2_grpc.RaxxlaServicer):
-    def ConvertPlanet(self, request, context):
-        try:
-            edsm_object = schema.EdsmObject('planet', request.json)
-            return edsm_object.generate_proto()
-        except Exception as e:
-            logging.error(e)
-            return
+    def GetPlanet(self, request, context):
+        edsm_object = bodies_pb2.Planet()
+        return edsm_object
 
-    def ConvertPowerplay(self, request, context):
-        try:
-            edsm_object = schema.EdsmObject('powerplay', request.json)
-            return edsm_object.generate_proto()
-        except Exception as e:
-            logging.error(e)
-            return
+    def GetPowerplay(self, request, context):
+        edsm_object = society_pb2.Powerplay()
+        return edsm_object
 
-    def ConvertStar(self, request, context):
-        try:
-            edsm_object = schema.EdsmObject('star', request.json)
-            return edsm_object.generate_proto()
-        except Exception as e:
-            logging.error(e)
-            return
 
 def main(argv):
     del argv

@@ -7,14 +7,8 @@ import "protos/society.proto";
 import "protos/system.proto";
 
 service Raxxla {
-  // Bodies
-  rpc ConvertPlanet (EdsmRequest) returns (Planet) {}
-  rpc ConvertStar (EdsmRequest) returns (Star) {}
-
-  // Society
-  rpc ConvertPowerplay (EdsmRequest) returns (Powerplay) {}
+  rpc GetPlanet (KeyRequest) returns (Planet) {}
   rpc GetPowerplay (KeyRequest) returns (Powerplay) {}
-  rpc SetPowerplay (Powerplay) returns (SetResponse) {}
 }
 
 message EdsmRequest {
@@ -25,7 +19,6 @@ message KeyRequest {
   int64 id = 1;
 }
 
-// Responses
 enum ResponseCodes {
   SUCCESS = 0;
   FAILED = 1;

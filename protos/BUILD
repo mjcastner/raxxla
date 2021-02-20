@@ -4,6 +4,7 @@ load("@rules_proto_grpc//python:defs.bzl", "python_proto_library", "python_grpc_
 python_grpc_library(
     name = "api_raxxla_grpc_py",
     deps = [":api_raxxla_proto"],
+    visibility = ["//visibility:public"],
 )
 
 proto_library(
@@ -46,24 +47,29 @@ proto_library(
 python_proto_library(
     name = "bodies_proto_py",
     deps = [":bodies_proto"],
+    visibility = ["//visibility:public"],
 )
 
 python_proto_library(
     name = "poi_proto_py",
     deps = [":poi_proto"],
+    visibility = ["//visibility:public"],
 )
 
 python_proto_library(
     name = "settlement_proto_py",
     deps = [":settlement_proto"],
+    visibility = ["//visibility:public"],
 )
 
 python_proto_library(
     name = "society_proto_py",
     deps = [":society_proto"],
+    visibility = ["//visibility:public"],
 )
 
 python_proto_library(
     name = "system_proto_py",
     deps = [":system_proto"],
+    visibility = ["//visibility:public"],
 )
